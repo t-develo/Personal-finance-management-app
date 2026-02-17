@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>アクセス権限がありません</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Noto Sans JP", sans-serif;
+        background: #0f1218;
+        color: #e4e8ef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 24px;
+      }
+      .container {
+        text-align: center;
+        max-width: 420px;
+      }
+      .icon {
+        font-size: 64px;
+        margin-bottom: 24px;
+        opacity: 0.6;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      p {
+        font-size: 15px;
+        color: #8b95a5;
+        margin-bottom: 32px;
+        line-height: 1.7;
+      }
+      a {
+        display: inline-block;
+        background: #1e2530;
+        color: #4f8cff;
+        text-decoration: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        border: 1px solid #2a3040;
+      }
+      a:hover {
+        background: #252d3a;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">🔒</div>
+      <h1>アクセス権限がありません</h1>
+      <p>
+        このアプリケーションは招待制です。<br />
+        アクセスが必要な場合は管理者にお問い合わせください。
+      </p>
+      <a href="/.auth/logout">ログアウト</a>
+    </div>
+  </body>
+</html>
