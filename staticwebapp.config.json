@@ -22,6 +22,10 @@
     "rewrite": "/index.html",
     "exclude": ["/assets/*", "/api/*", "/.auth/*"]
   },
+  "mimeTypes": {
+    ".js": "text/javascript",
+    ".json": "application/json"
+  },
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
