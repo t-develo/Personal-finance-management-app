@@ -21,6 +21,8 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 24,
+    gap: 12,
+    flexWrap: "wrap",
   },
   title: { fontSize: 20, fontWeight: 700 },
   monthNav: {
@@ -36,6 +38,11 @@ const styles = {
     padding: "6px 12px",
     fontSize: 16,
     cursor: "pointer",
+    minWidth: 44,
+    minHeight: 44,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   monthLabel: {
     fontSize: 16,
