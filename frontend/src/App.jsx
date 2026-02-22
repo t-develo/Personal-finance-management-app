@@ -31,22 +31,96 @@ function formatYearMonth(ym) {
   return `${y}年${parseInt(m)}月`;
 }
 
+/* ─────────────────────────────────────────────
+   Layout CSS — inline style は使わず class で制御
+   ───────────────────────────────────────────── */
+const layoutCSS = `
+  /* === Desktop (default) === */
+  .app-layout {
+    display: flex;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .app-sidebar {
+    width: 240px;
+    min-width: 240px;
+    background: #161b24;
+    border-right: 1px solid #1e2530;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .mobile-header {
+    display: none;
+  }
+
+  .sidebar-overlay {
+    display: none;
+  }
+
+  .app-main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+    min-width: 0;
+  }
+
+  /* === Mobile (<= 768px) === */
+  @media (max-width: 768px) {
+    .app-layout {
+      flex-direction: column;
+    }
+
+    .app-sidebar {
+      display: none;
+    }
+
+    .app-sidebar.open {
+      display: flex;
+      position: fixed;
+      z-index: 100;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 280px;
+      min-width: 280px;
+    }
+
+    .sidebar-overlay.visible {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 90;
+    }
+
+    .mobile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: #161b24;
+      border-bottom: 1px solid #1e2530;
+      flex-shrink: 0;
+    }
+
+    .app-main {
+      padding: 16px;
+      flex: 1;
+      min-height: 0;
+    }
+  }
+`;
+
+/* ─────────────────────────────────────
+   Decorative inline styles (colours etc.)
+   ───────────────────────────────────── */
 const styles = {
-  layout: {
-    display: "flex",
-    height: "100vh",
-    overflow: "hidden",
-  },
-  sidebar: {
-    width: 240,
-    minWidth: 240,
-    background: "#161b24",
-    borderRight: "1px solid #1e2530",
-    display: "flex",
-    flexDirection: "column",
-    height: "100vh",
-    overflowY: "auto",
-  },
   sidebarHeader: {
     padding: "20px 16px 12px",
     borderBottom: "1px solid #1e2530",
@@ -65,7 +139,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    padding: "10px 16px",
+    padding: "12px 16px",
+    minHeight: 44,
     cursor: "pointer",
     background: active ? "#1e2530" : "transparent",
     color: active ? "#fff" : "#8b95a5",
@@ -98,9 +173,13 @@ const styles = {
     border: "none",
     color: "#8b95a5",
     cursor: "pointer",
-    padding: "4px 8px",
     fontSize: 16,
     borderRadius: 4,
+    minWidth: 44,
+    minHeight: 44,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   monthText: {
     fontSize: 14,
@@ -121,43 +200,19 @@ const styles = {
     textDecoration: "none",
     fontSize: 12,
   },
-  main: {
-    flex: 1,
-    overflow: "auto",
-    padding: "24px 32px",
-  },
-  mobileHeader: {
-    display: "none",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "12px 16px",
-    background: "#161b24",
-    borderBottom: "1px solid #1e2530",
-  },
   hamburger: {
     background: "none",
     border: "none",
     color: "#e4e8ef",
     fontSize: 24,
     cursor: "pointer",
-    padding: 4,
-  },
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.5)",
-    zIndex: 90,
+    minWidth: 44,
+    minHeight: 44,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 };
-
-const responsiveCSS = `
-  @media (max-width: 768px) {
-    .app-sidebar { display: none !important; }
-    .mobile-header { display: flex !important; }
-    .app-sidebar.open { display: flex !important; position: fixed; z-index: 100; top: 0; left: 0; bottom: 0; }
-    .app-main { padding: 16px !important; }
-  }
-`;
 
 export default function App() {
   const [tab, setTab] = useState("dashboard");
@@ -224,34 +279,32 @@ export default function App() {
 
   return (
     <>
-      <style>{responsiveCSS}</style>
-      <div style={styles.layout}>
-        {/* Mobile header */}
-        <div className="mobile-header" style={styles.mobileHeader}>
+      <style>{layoutCSS}</style>
+      <div className="app-layout">
+        {/* Mobile header — CSS controls visibility */}
+        <header className="mobile-header">
           <button style={styles.hamburger} onClick={() => setMenuOpen(!menuOpen)}>
             ☰
           </button>
-          <span style={{ fontWeight: 700 }}>家計管理</span>
+          <span style={{ fontWeight: 700, fontSize: 16 }}>家計管理</span>
           <span style={{ fontSize: 13, color: "#6b7585" }}>
             {formatYearMonth(yearMonth)}
           </span>
-        </div>
+        </header>
 
-        {/* Overlay */}
-        {menuOpen && (
-          <div style={styles.overlay} onClick={() => setMenuOpen(false)} />
-        )}
+        {/* Sidebar overlay (mobile only) */}
+        <div
+          className={`sidebar-overlay${menuOpen ? " visible" : ""}`}
+          onClick={() => setMenuOpen(false)}
+        />
 
-        {/* Sidebar */}
-        <aside
-          className={`app-sidebar${menuOpen ? " open" : ""}`}
-          style={styles.sidebar}
-        >
+        {/* Sidebar — NO inline style for layout props */}
+        <aside className={`app-sidebar${menuOpen ? " open" : ""}`}>
           {sidebarContent}
         </aside>
 
         {/* Main content */}
-        <main className="app-main" style={styles.main}>
+        <main className="app-main">
           {tab === "dashboard" && <Dashboard data={data} yearMonth={yearMonth} />}
           {tab === "accounts" && <AccountsTab data={data} />}
           {tab === "fixed" && <FixedPaymentsTab data={data} />}

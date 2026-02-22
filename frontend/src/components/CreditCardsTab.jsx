@@ -9,6 +9,8 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
+    gap: 12,
+    flexWrap: "wrap",
   },
   title: { fontSize: 20, fontWeight: 700 },
   addBtn: {
@@ -20,6 +22,8 @@ const styles = {
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
+    minHeight: 44,
+    whiteSpace: "nowrap",
   },
   grid: {
     display: "grid",
@@ -34,6 +38,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
   },
   cardName: {
     fontSize: 15,
