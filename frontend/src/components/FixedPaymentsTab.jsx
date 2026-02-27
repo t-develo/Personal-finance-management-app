@@ -8,6 +8,16 @@ function fmt(n) {
   return "¥" + Number(n || 0).toLocaleString("ja-JP");
 }
 
+const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+function parseBonusMonths(str) {
+  if (!str) return [];
+  return str
+    .split(",")
+    .map(Number)
+    .filter((n) => n >= 1 && n <= 12);
+}
+
 const styles = {
   header: {
     display: "flex",
@@ -57,7 +67,12 @@ const styles = {
     fontSize: 20,
     fontWeight: 500,
     color: "#f0a0c0",
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  bonusInfo: {
+    fontSize: 12,
+    color: "#f0c060",
+    marginBottom: 12,
   },
   actions: {
     display: "flex",
@@ -82,6 +97,19 @@ const styles = {
     fontSize: 13,
     cursor: "pointer",
   },
+  bonusLabel: {
+    display: "block",
+    fontSize: 13,
+    color: "#8b95a5",
+    marginBottom: 6,
+    fontWeight: 500,
+  },
+  monthsGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 16,
+  },
 };
 
 export default function FixedPaymentsTab({ data }) {
@@ -91,6 +119,8 @@ export default function FixedPaymentsTab({ data }) {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [accountId, setAccountId] = useState("");
+  const [bonusMonths, setBonusMonths] = useState([]);
+  const [bonusAmount, setBonusAmount] = useState("");
 
   const accountOptions = [
     { value: "", label: "未設定" },
@@ -101,6 +131,8 @@ export default function FixedPaymentsTab({ data }) {
     setName("");
     setAmount("");
     setAccountId("");
+    setBonusMonths([]);
+    setBonusAmount("");
     setModal({ mode: "add" });
   };
 
@@ -108,7 +140,15 @@ export default function FixedPaymentsTab({ data }) {
     setName(item.name);
     setAmount(String(item.amount));
     setAccountId(item.accountId || "");
+    setBonusMonths(parseBonusMonths(item.bonusMonths));
+    setBonusAmount(item.bonusAmount ? String(item.bonusAmount) : "");
     setModal({ mode: "edit", item });
+  };
+
+  const toggleBonusMonth = (m) => {
+    setBonusMonths((prev) =>
+      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m].sort((a, b) => a - b)
+    );
   };
 
   const handleSubmit = async () => {
@@ -116,6 +156,8 @@ export default function FixedPaymentsTab({ data }) {
       name,
       amount: parseFloat(amount) || 0,
       accountId,
+      bonusMonths: bonusMonths.join(","),
+      bonusAmount: parseFloat(bonusAmount) || 0,
     };
     if (modal.mode === "add") {
       await addFixedPayment(payload);
@@ -147,26 +189,35 @@ export default function FixedPaymentsTab({ data }) {
         <EmptyState icon="📋" message="固定支払いを追加してください" />
       ) : (
         <div style={styles.grid}>
-          {fixedPayments.map((fp) => (
-            <div key={fp.id} style={styles.card}>
-              <div style={styles.cardName}>{fp.name}</div>
-              <div style={styles.cardAccount}>
-                引落: {getAccountName(fp.accountId)}
+          {fixedPayments.map((fp) => {
+            const bonusMonthsList = parseBonusMonths(fp.bonusMonths);
+            return (
+              <div key={fp.id} style={styles.card}>
+                <div style={styles.cardName}>{fp.name}</div>
+                <div style={styles.cardAccount}>
+                  引落: {getAccountName(fp.accountId)}
+                </div>
+                <div style={styles.cardAmount}>{fmt(fp.amount)}</div>
+                {bonusMonthsList.length > 0 && (
+                  <div style={styles.bonusInfo}>
+                    ボーナス月: {bonusMonthsList.map((m) => `${m}月`).join(", ")}
+                    {fp.bonusAmount > 0 && ` +${fmt(fp.bonusAmount)}`}
+                  </div>
+                )}
+                <div style={styles.actions}>
+                  <button style={styles.editBtn} onClick={() => openEdit(fp)}>
+                    編集
+                  </button>
+                  <button
+                    style={styles.deleteBtn}
+                    onClick={() => handleDelete(fp.id)}
+                  >
+                    削除
+                  </button>
+                </div>
               </div>
-              <div style={styles.cardAmount}>{fmt(fp.amount)}</div>
-              <div style={styles.actions}>
-                <button style={styles.editBtn} onClick={() => openEdit(fp)}>
-                  編集
-                </button>
-                <button
-                  style={styles.deleteBtn}
-                  onClick={() => handleDelete(fp.id)}
-                >
-                  削除
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -196,6 +247,38 @@ export default function FixedPaymentsTab({ data }) {
             value={accountId}
             onChange={setAccountId}
             options={accountOptions}
+          />
+          <div>
+            <label style={styles.bonusLabel}>ボーナス月</label>
+            <div style={styles.monthsGrid}>
+              {MONTHS.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => toggleBonusMonth(m)}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #2a3040",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    background: bonusMonths.includes(m) ? "#4f8cff" : "#1e2530",
+                    color: bonusMonths.includes(m) ? "#fff" : "#8b95a5",
+                  }}
+                >
+                  {m}月
+                </button>
+              ))}
+            </div>
+          </div>
+          <InputField
+            label="ボーナス追加額"
+            type="number"
+            value={bonusAmount}
+            onChange={setBonusAmount}
+            placeholder="0"
+            step="1"
           />
         </Modal>
       )}

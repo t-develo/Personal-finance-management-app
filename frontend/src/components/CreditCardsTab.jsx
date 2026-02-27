@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Modal from "./ui/Modal";
 import InputField from "./ui/InputField";
+import SelectField from "./ui/SelectField";
 import EmptyState from "./ui/EmptyState";
 
 const styles = {
@@ -41,10 +42,19 @@ const styles = {
     gap: 12,
     flexWrap: "wrap",
   },
+  cardInfo: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+  },
   cardName: {
     fontSize: 15,
     fontWeight: 600,
     color: "#e4e8ef",
+  },
+  cardAccount: {
+    fontSize: 13,
+    color: "#6b7585",
   },
   actions: {
     display: "flex",
@@ -71,25 +81,34 @@ const styles = {
 };
 
 export default function CreditCardsTab({ data }) {
-  const { creditCards, addCreditCard, editCreditCard, removeCreditCard } = data;
+  const { accounts, creditCards, addCreditCard, editCreditCard, removeCreditCard } = data;
   const [modal, setModal] = useState(null);
   const [name, setName] = useState("");
+  const [accountId, setAccountId] = useState("");
+
+  const accountOptions = [
+    { value: "", label: "未設定" },
+    ...accounts.map((a) => ({ value: a.id, label: a.name })),
+  ];
 
   const openAdd = () => {
     setName("");
+    setAccountId("");
     setModal({ mode: "add" });
   };
 
   const openEdit = (item) => {
     setName(item.name);
+    setAccountId(item.accountId || "");
     setModal({ mode: "edit", item });
   };
 
   const handleSubmit = async () => {
+    const payload = { name, accountId };
     if (modal.mode === "add") {
-      await addCreditCard({ name });
+      await addCreditCard(payload);
     } else {
-      await editCreditCard(modal.item.id, { name });
+      await editCreditCard(modal.item.id, payload);
     }
     setModal(null);
   };
@@ -99,6 +118,9 @@ export default function CreditCardsTab({ data }) {
       await removeCreditCard(id);
     }
   };
+
+  const getAccountName = (accId) =>
+    accounts.find((a) => a.id === accId)?.name || null;
 
   return (
     <div>
@@ -115,7 +137,14 @@ export default function CreditCardsTab({ data }) {
         <div style={styles.grid}>
           {creditCards.map((cc) => (
             <div key={cc.id} style={styles.card}>
-              <div style={styles.cardName}>{cc.name}</div>
+              <div style={styles.cardInfo}>
+                <div style={styles.cardName}>{cc.name}</div>
+                {getAccountName(cc.accountId) && (
+                  <div style={styles.cardAccount}>
+                    引落: {getAccountName(cc.accountId)}
+                  </div>
+                )}
+              </div>
               <div style={styles.actions}>
                 <button style={styles.editBtn} onClick={() => openEdit(cc)}>
                   編集
@@ -144,6 +173,12 @@ export default function CreditCardsTab({ data }) {
             onChange={setName}
             placeholder="例: 楽天カード"
             required
+          />
+          <SelectField
+            label="引き落とし口座"
+            value={accountId}
+            onChange={setAccountId}
+            options={accountOptions}
           />
         </Modal>
       )}
