@@ -69,11 +69,6 @@ const styles = {
     color: "#f0a0c0",
     marginBottom: 8,
   },
-  bonusInfo: {
-    fontSize: 12,
-    color: "#f0c060",
-    marginBottom: 12,
-  },
   actions: {
     display: "flex",
     gap: 8,
@@ -189,35 +184,26 @@ export default function FixedPaymentsTab({ data }) {
         <EmptyState icon="📋" message="固定支払いを追加してください" />
       ) : (
         <div style={styles.grid}>
-          {fixedPayments.map((fp) => {
-            const bonusMonthsList = parseBonusMonths(fp.bonusMonths);
-            return (
-              <div key={fp.id} style={styles.card}>
-                <div style={styles.cardName}>{fp.name}</div>
-                <div style={styles.cardAccount}>
-                  引落: {getAccountName(fp.accountId)}
-                </div>
-                <div style={styles.cardAmount}>{fmt(fp.amount)}</div>
-                {bonusMonthsList.length > 0 && (
-                  <div style={styles.bonusInfo}>
-                    ボーナス月: {bonusMonthsList.map((m) => `${m}月`).join(", ")}
-                    {fp.bonusAmount > 0 && ` +${fmt(fp.bonusAmount)}`}
-                  </div>
-                )}
-                <div style={styles.actions}>
-                  <button style={styles.editBtn} onClick={() => openEdit(fp)}>
-                    編集
-                  </button>
-                  <button
-                    style={styles.deleteBtn}
-                    onClick={() => handleDelete(fp.id)}
-                  >
-                    削除
-                  </button>
-                </div>
+          {fixedPayments.map((fp) => (
+            <div key={fp.id} style={styles.card}>
+              <div style={styles.cardName}>{fp.name}</div>
+              <div style={styles.cardAccount}>
+                引落: {getAccountName(fp.accountId)}
               </div>
-            );
-          })}
+              <div style={styles.cardAmount}>{fmt(fp.amount)}</div>
+              <div style={styles.actions}>
+                <button style={styles.editBtn} onClick={() => openEdit(fp)}>
+                  編集
+                </button>
+                <button
+                  style={styles.deleteBtn}
+                  onClick={() => handleDelete(fp.id)}
+                >
+                  削除
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
