@@ -4,6 +4,14 @@ function fmt(n) {
   return "¥" + Number(n || 0).toLocaleString("ja-JP");
 }
 
+function parseBonusMonths(str) {
+  if (!str) return [];
+  return str
+    .split(",")
+    .map(Number)
+    .filter((n) => n >= 1 && n <= 12);
+}
+
 const dashboardCSS = `
   .summary-grid {
     display: flex;
@@ -94,6 +102,8 @@ export default function Dashboard({ data, yearMonth }) {
     return <div style={{ color: "#6b7585", padding: 40 }}>読み込み中...</div>;
   }
 
+  const currentMonth = parseInt(yearMonth.split("-")[1]);
+
   // Compute account balances: use monthly record if available, else fallback to master
   const accountBalanceMap = {};
   accounts.forEach((acc) => {
@@ -108,14 +118,18 @@ export default function Dashboard({ data, yearMonth }) {
     0
   );
 
-  // Fixed payment deductions by account
+  // Fixed payment deductions by account (including bonus amounts for bonus months)
   const deductionByAccount = {};
   let totalFixed = 0;
   fixedPayments.forEach((fp) => {
-    totalFixed += fp.amount || 0;
+    const bonusMonthsList = parseBonusMonths(fp.bonusMonths);
+    const isBonus = bonusMonthsList.includes(currentMonth);
+    const amount = (fp.amount || 0) + (isBonus ? (fp.bonusAmount || 0) : 0);
+
+    totalFixed += amount;
     if (fp.accountId) {
       deductionByAccount[fp.accountId] =
-        (deductionByAccount[fp.accountId] || 0) + (fp.amount || 0);
+        (deductionByAccount[fp.accountId] || 0) + amount;
     }
   });
 
@@ -128,6 +142,14 @@ export default function Dashboard({ data, yearMonth }) {
     (s, v) => s + (v || 0),
     0
   );
+
+  // Add card payment deductions to accounts via card's accountId
+  creditCards.forEach((cc) => {
+    if (cc.accountId) {
+      deductionByAccount[cc.accountId] =
+        (deductionByAccount[cc.accountId] || 0) + (cardPaymentMap[cc.id] || 0);
+    }
+  });
 
   const totalExpenses = totalFixed + totalCards;
   const netBalance = totalBalance - totalExpenses;
@@ -261,11 +283,39 @@ export default function Dashboard({ data, yearMonth }) {
                 {fixedPayments.map((fp) => {
                   const accName =
                     accounts.find((a) => a.id === fp.accountId)?.name || "未設定";
+                  const bonusMonthsList = parseBonusMonths(fp.bonusMonths);
+                  const isBonus = bonusMonthsList.includes(currentMonth);
+                  const totalAmount =
+                    (fp.amount || 0) + (isBonus ? fp.bonusAmount || 0 : 0);
                   return (
                     <tr key={fp.id}>
-                      <td style={tdStyle}>{fp.name}</td>
+                      <td style={tdStyle}>
+                        {fp.name}
+                        {isBonus && (
+                          <span
+                            style={{
+                              marginLeft: 8,
+                              fontSize: 11,
+                              background: "#2a2010",
+                              color: "#f0c060",
+                              border: "1px solid #4a3820",
+                              borderRadius: 4,
+                              padding: "1px 6px",
+                            }}
+                          >
+                            ボーナス月
+                          </span>
+                        )}
+                      </td>
                       <td style={tdStyle}>{accName}</td>
-                      <td style={tdMono}>{fmt(fp.amount)}</td>
+                      <td style={tdMono}>
+                        {fmt(totalAmount)}
+                        {isBonus && fp.bonusAmount > 0 && (
+                          <div style={{ fontSize: 11, color: "#f0c060" }}>
+                            {fmt(fp.amount)} + {fmt(fp.bonusAmount)}
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -294,18 +344,26 @@ export default function Dashboard({ data, yearMonth }) {
               <thead>
                 <tr>
                   <th style={thStyle}>カード名</th>
+                  <th style={thStyle}>引落口座</th>
                   <th style={thRight}>今月の支払額</th>
                 </tr>
               </thead>
               <tbody>
-                {creditCards.map((cc) => (
-                  <tr key={cc.id}>
-                    <td style={tdStyle}>{cc.name}</td>
-                    <td style={tdMono}>{fmt(cardPaymentMap[cc.id])}</td>
-                  </tr>
-                ))}
+                {creditCards.map((cc) => {
+                  const accName =
+                    accounts.find((a) => a.id === cc.accountId)?.name || "未設定";
+                  return (
+                    <tr key={cc.id}>
+                      <td style={tdStyle}>{cc.name}</td>
+                      <td style={tdStyle}>{accName}</td>
+                      <td style={tdMono}>{fmt(cardPaymentMap[cc.id])}</td>
+                    </tr>
+                  );
+                })}
                 <tr style={totalRow}>
-                  <td style={tdStyle}>合計</td>
+                  <td style={tdStyle} colSpan={2}>
+                    合計
+                  </td>
                   <td style={tdMono}>{fmt(totalCards)}</td>
                 </tr>
               </tbody>

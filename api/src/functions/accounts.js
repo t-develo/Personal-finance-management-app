@@ -126,6 +126,24 @@ app.http("accounts-delete", {
       );
     }
 
+    // Clear accountId references in creditCards
+    const ccClient = getTableClient("creditCards");
+    const ccIter = ccClient.listEntities({
+      queryOptions: {
+        filter: `PartitionKey eq '${user.userId}' and accountId eq '${id}'`,
+      },
+    });
+    for await (const cc of ccIter) {
+      await ccClient.updateEntity(
+        {
+          partitionKey: user.userId,
+          rowKey: cc.rowKey,
+          accountId: "",
+        },
+        "Merge"
+      );
+    }
+
     return { status: 204 };
   },
 });

@@ -26,6 +26,8 @@ app.http("fixedPayments-list", {
         name: entity.name,
         amount: entity.amount,
         accountId: entity.accountId,
+        bonusMonths: entity.bonusMonths || "",
+        bonusAmount: entity.bonusAmount || 0,
         createdAt: entity.createdAt,
       });
     }
@@ -52,6 +54,8 @@ app.http("fixedPayments-create", {
       name: body.name,
       amount: body.amount || 0,
       accountId: body.accountId || "",
+      bonusMonths: body.bonusMonths || "",
+      bonusAmount: body.bonusAmount || 0,
       createdAt: now,
     });
 
@@ -62,6 +66,8 @@ app.http("fixedPayments-create", {
         name: body.name,
         amount: body.amount || 0,
         accountId: body.accountId || "",
+        bonusMonths: body.bonusMonths || "",
+        bonusAmount: body.bonusAmount || 0,
         createdAt: now,
       },
     };
@@ -87,6 +93,8 @@ app.http("fixedPayments-update", {
         name: body.name,
         amount: body.amount,
         accountId: body.accountId || "",
+        bonusMonths: body.bonusMonths || "",
+        bonusAmount: body.bonusAmount || 0,
       },
       "Merge"
     );
@@ -97,6 +105,8 @@ app.http("fixedPayments-update", {
         name: body.name,
         amount: body.amount,
         accountId: body.accountId || "",
+        bonusMonths: body.bonusMonths || "",
+        bonusAmount: body.bonusAmount || 0,
       },
     };
   },

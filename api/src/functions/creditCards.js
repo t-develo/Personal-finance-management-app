@@ -24,6 +24,7 @@ app.http("creditCards-list", {
       entities.push({
         id: entity.rowKey,
         name: entity.name,
+        accountId: entity.accountId || "",
         createdAt: entity.createdAt,
       });
     }
@@ -48,12 +49,13 @@ app.http("creditCards-create", {
       partitionKey: user.userId,
       rowKey: id,
       name: body.name,
+      accountId: body.accountId || "",
       createdAt: now,
     });
 
     return {
       status: 201,
-      jsonBody: { id, name: body.name, createdAt: now },
+      jsonBody: { id, name: body.name, accountId: body.accountId || "", createdAt: now },
     };
   },
 });
@@ -75,11 +77,12 @@ app.http("creditCards-update", {
         partitionKey: user.userId,
         rowKey: id,
         name: body.name,
+        accountId: body.accountId || "",
       },
       "Merge"
     );
 
-    return { jsonBody: { id, name: body.name } };
+    return { jsonBody: { id, name: body.name, accountId: body.accountId || "" } };
   },
 });
 
