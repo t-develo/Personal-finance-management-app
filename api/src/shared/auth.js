@@ -1,13 +1,19 @@
+const {
+  verifyToken,
+  getTokenFromRequest,
+  OWNER_USER_ID,
+} = require("./authConfig");
+
 function getUserInfo(request) {
-  const header = request.headers.get("x-ms-client-principal");
-  if (!header) return null;
-  const encoded = Buffer.from(header, "base64");
-  const clientPrincipal = JSON.parse(encoded.toString("ascii"));
+  const token = getTokenFromRequest(request);
+  if (!token) return null;
+  const payload = verifyToken(token);
+  if (!payload) return null;
   return {
-    userId: clientPrincipal.userId,
-    identityProvider: clientPrincipal.identityProvider,
-    userDetails: clientPrincipal.userDetails,
-    userRoles: clientPrincipal.userRoles,
+    userId: payload.userId,
+    identityProvider: "custom",
+    userDetails: "owner",
+    userRoles: ["authenticated", "owner"],
   };
 }
 

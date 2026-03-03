@@ -1,26 +1,21 @@
 {
   "routes": [
     {
+      "route": "/api/auth/*",
+      "allowedRoles": ["anonymous"]
+    },
+    {
       "route": "/api/*",
-      "allowedRoles": ["owner"]
+      "allowedRoles": ["anonymous"]
     },
     {
       "route": "/*",
-      "allowedRoles": ["owner"]
+      "allowedRoles": ["anonymous"]
     }
   ],
-  "responseOverrides": {
-    "401": {
-      "redirect": "/.auth/login/github",
-      "statusCode": 302
-    },
-    "403": {
-      "rewrite": "/403.html"
-    }
-  },
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/api/*", "/.auth/*"]
+    "exclude": ["/assets/*", "/api/*"]
   },
   "mimeTypes": {
     ".js": "text/javascript",

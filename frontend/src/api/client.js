@@ -3,6 +3,7 @@ const BASE = "/api";
 async function request(url, options = {}) {
   const res = await fetch(url, {
     ...options,
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
@@ -10,7 +11,7 @@ async function request(url, options = {}) {
   });
 
   if (res.status === 401 || res.status === 403) {
-    window.location.href = "/.auth/login/github";
+    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
     throw new Error("Unauthorized");
   }
 
@@ -22,11 +23,57 @@ async function request(url, options = {}) {
   return res.json();
 }
 
-// User
-export async function fetchUser() {
-  const res = await fetch("/.auth/me");
+// Auth API
+export async function fetchAuthStatus() {
+  const res = await fetch(`${BASE}/auth/status`, {
+    credentials: "same-origin",
+  });
+  return res.json();
+}
+
+export async function registerOwner(password) {
+  const res = await fetch(`${BASE}/auth/register`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
   const data = await res.json();
-  return data.clientPrincipal;
+  if (!res.ok) throw new Error(data.error || "Registration failed");
+  return data;
+}
+
+export async function login(password) {
+  const res = await fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Login failed");
+  return data;
+}
+
+export async function refreshToken() {
+  const res = await fetch(`${BASE}/auth/refresh`, {
+    method: "POST",
+    credentials: "same-origin",
+  });
+  return res.ok;
+}
+
+export async function logout() {
+  await fetch(`${BASE}/auth/logout`, {
+    method: "POST",
+    credentials: "same-origin",
+  });
+}
+
+export async function fetchUser() {
+  const status = await fetchAuthStatus();
+  if (status.authenticated && status.user) return status.user;
+  return null;
 }
 
 // Accounts

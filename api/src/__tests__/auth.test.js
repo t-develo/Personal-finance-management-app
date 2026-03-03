@@ -1,19 +1,23 @@
 "use strict";
 
+jest.mock("jsonwebtoken");
+jest.mock("cookie");
+
+process.env.JWT_SECRET = "test-secret-key-for-testing-only";
+
+const jwt = require("jsonwebtoken");
+const cookie = require("cookie");
 const { getUserInfo, requireOwner } = require("../shared/auth");
 
-// テスト用リクエストヘルパー
-function createRequest(principalData) {
-  const encoded = Buffer.from(JSON.stringify(principalData)).toString("base64");
+function createRequestWithCookie(cookieHeader) {
   return {
     headers: {
-      get: (name) =>
-        name === "x-ms-client-principal" ? encoded : null,
+      get: (name) => (name === "cookie" ? cookieHeader : null),
     },
   };
 }
 
-function createRequestWithoutHeader() {
+function createRequestWithoutCookie() {
   return {
     headers: {
       get: () => null,
@@ -21,133 +25,90 @@ function createRequestWithoutHeader() {
   };
 }
 
-function createRequestWithRoles(roles) {
-  return createRequest({
-    userId: "user-abc123",
-    identityProvider: "github",
-    userDetails: "testuser",
-    userRoles: roles,
-  });
-}
-
 describe("getUserInfo", () => {
-  describe("x-ms-client-principalヘッダーが存在する場合", () => {
-    it("base64デコードしたユーザー情報を返す", () => {
-      const principal = {
-        userId: "user-abc123",
-        identityProvider: "github",
-        userDetails: "testuser",
-        userRoles: ["authenticated", "owner"],
-      };
-      const request = createRequest(principal);
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-      const result = getUserInfo(request);
+  it("cookieがない場合はnullを返す", () => {
+    const request = createRequestWithoutCookie();
+    const result = getUserInfo(request);
+    expect(result).toBeNull();
+  });
 
-      expect(result).toEqual({
-        userId: "user-abc123",
-        identityProvider: "github",
-        userDetails: "testuser",
-        userRoles: ["authenticated", "owner"],
-      });
-    });
+  it("有効なJWTトークンがある場合はユーザー情報を返す", () => {
+    cookie.parse.mockReturnValue({ auth_token: "valid-token" });
+    jwt.verify.mockReturnValue({ userId: "owner", role: "owner" });
 
-    it("ロールが複数ある場合もすべて返す", () => {
-      const principal = {
-        userId: "user-xyz",
-        identityProvider: "github",
-        userDetails: "multiroluser",
-        userRoles: ["anonymous", "authenticated", "owner"],
-      };
-      const request = createRequest(principal);
+    const request = createRequestWithCookie("auth_token=valid-token");
+    const result = getUserInfo(request);
 
-      const result = getUserInfo(request);
-
-      expect(result.userRoles).toEqual(["anonymous", "authenticated", "owner"]);
-    });
-
-    it("ロールが空配列の場合も正常に返す", () => {
-      const principal = {
-        userId: "user-noroles",
-        identityProvider: "github",
-        userDetails: "noroleuser",
-        userRoles: [],
-      };
-      const request = createRequest(principal);
-
-      const result = getUserInfo(request);
-
-      expect(result.userRoles).toEqual([]);
+    expect(result).toEqual({
+      userId: "owner",
+      identityProvider: "custom",
+      userDetails: "owner",
+      userRoles: ["authenticated", "owner"],
     });
   });
 
-  describe("x-ms-client-principalヘッダーが存在しない場合", () => {
-    it("nullを返す", () => {
-      const request = createRequestWithoutHeader();
-
-      const result = getUserInfo(request);
-
-      expect(result).toBeNull();
+  it("無効なトークンの場合はnullを返す", () => {
+    cookie.parse.mockReturnValue({ auth_token: "invalid-token" });
+    jwt.verify.mockImplementation(() => {
+      throw new Error("invalid");
     });
+
+    const request = createRequestWithCookie("auth_token=invalid-token");
+    const result = getUserInfo(request);
+
+    expect(result).toBeNull();
+  });
+
+  it("auth_tokenがcookieにない場合はnullを返す", () => {
+    cookie.parse.mockReturnValue({ other_cookie: "value" });
+
+    const request = createRequestWithCookie("other_cookie=value");
+    const result = getUserInfo(request);
+
+    expect(result).toBeNull();
   });
 });
 
 describe("requireOwner", () => {
-  describe("ownerロールを持つ認証済みユーザーの場合", () => {
-    it("authorized: trueとユーザー情報を返す", () => {
-      const request = createRequestWithRoles(["authenticated", "owner"]);
-
-      const result = requireOwner(request);
-
-      expect(result.authorized).toBe(true);
-      expect(result.user).not.toBeNull();
-    });
-
-    it("返されるユーザー情報にuserIdが含まれる", () => {
-      const request = createRequestWithRoles(["authenticated", "owner"]);
-
-      const result = requireOwner(request);
-
-      expect(result.user.userId).toBe("user-abc123");
-    });
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  describe("ownerロールを持たないユーザーの場合", () => {
-    it("authenticatedのみの場合はauthorized: falseを返す", () => {
-      const request = createRequestWithRoles(["authenticated"]);
+  it("有効な認証済みオーナーの場合はauthorized: trueを返す", () => {
+    cookie.parse.mockReturnValue({ auth_token: "valid-token" });
+    jwt.verify.mockReturnValue({ userId: "owner", role: "owner" });
 
-      const result = requireOwner(request);
+    const request = createRequestWithCookie("auth_token=valid-token");
+    const result = requireOwner(request);
 
-      expect(result.authorized).toBe(false);
-      expect(result.user).toBeNull();
-    });
-
-    it("anonymousのみの場合はauthorized: falseを返す", () => {
-      const request = createRequestWithRoles(["anonymous"]);
-
-      const result = requireOwner(request);
-
-      expect(result.authorized).toBe(false);
-      expect(result.user).toBeNull();
-    });
-
-    it("ロールが空の場合はauthorized: falseを返す", () => {
-      const request = createRequestWithRoles([]);
-
-      const result = requireOwner(request);
-
-      expect(result.authorized).toBe(false);
-      expect(result.user).toBeNull();
-    });
+    expect(result.authorized).toBe(true);
+    expect(result.user).not.toBeNull();
+    expect(result.user.userId).toBe("owner");
+    expect(result.user.userRoles).toContain("owner");
   });
 
-  describe("認証ヘッダーが存在しない場合", () => {
-    it("authorized: falseとnullユーザーを返す", () => {
-      const request = createRequestWithoutHeader();
+  it("認証ヘッダーが存在しない場合はauthorized: falseを返す", () => {
+    const request = createRequestWithoutCookie();
+    const result = requireOwner(request);
 
-      const result = requireOwner(request);
+    expect(result.authorized).toBe(false);
+    expect(result.user).toBeNull();
+  });
 
-      expect(result.authorized).toBe(false);
-      expect(result.user).toBeNull();
+  it("無効なトークンの場合はauthorized: falseを返す", () => {
+    cookie.parse.mockReturnValue({ auth_token: "bad-token" });
+    jwt.verify.mockImplementation(() => {
+      throw new Error("invalid");
     });
+
+    const request = createRequestWithCookie("auth_token=bad-token");
+    const result = requireOwner(request);
+
+    expect(result.authorized).toBe(false);
+    expect(result.user).toBeNull();
   });
 });
