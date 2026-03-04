@@ -24,6 +24,7 @@
   },
   "mimeTypes": {
     ".js": "text/javascript",
+    ".jsx": "text/javascript",
     ".json": "application/json"
   },
   "globalHeaders": {
