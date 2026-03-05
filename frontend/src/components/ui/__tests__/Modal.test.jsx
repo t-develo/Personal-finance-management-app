@@ -67,7 +67,7 @@ describe("Modal", () => {
         </Modal>
       );
 
-      expect(screen.getByRole("button", { name: "✕" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "閉じる" })).toBeInTheDocument();
     });
   });
 
@@ -97,7 +97,7 @@ describe("Modal", () => {
         </Modal>
       );
 
-      await user.click(screen.getByRole("button", { name: "✕" }));
+      await user.click(screen.getByRole("button", { name: "閉じる" }));
 
       expect(handleClose).toHaveBeenCalledTimes(1);
     });

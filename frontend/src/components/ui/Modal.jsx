@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 
 const styles = {
   overlay: {
@@ -79,6 +79,8 @@ const styles = {
 };
 
 export default function Modal({ title, onClose, onSubmit, submitLabel, children }) {
+  const modalRef = useRef(null);
+
   useEffect(() => {
     const handler = (e) => {
       if (e.key === "Escape") onClose();
@@ -87,12 +89,45 @@ export default function Modal({ title, onClose, onSubmit, submitLabel, children 
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // Focus trap
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+
+    const focusableSelector =
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const focusables = modal.querySelectorAll(focusableSelector);
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    first?.focus();
+
+    const trapHandler = (e) => {
+      if (e.key !== "Tab") return;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    modal.addEventListener("keydown", trapHandler);
+    return () => modal.removeEventListener("keydown", trapHandler);
+  }, []);
+
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={modalRef}
+        style={styles.modal}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
         <div style={styles.header}>
-          <span style={styles.title}>{title}</span>
-          <button style={styles.closeBtn} onClick={onClose}>
+          <span id="modal-title" style={styles.title}>{title}</span>
+          <button style={styles.closeBtn} onClick={onClose} aria-label="閉じる">
             ✕
           </button>
         </div>

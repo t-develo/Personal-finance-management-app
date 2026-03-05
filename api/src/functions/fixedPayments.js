@@ -1,7 +1,9 @@
 const { app } = require("@azure/functions");
 const { v4: uuidv4 } = require("uuid");
-const { getTableClient } = require("../shared/tableClient");
+const { getTableClient, escapeODataString } = require("../shared/tableClient");
 const { requireOwner } = require("../shared/auth");
+const { handleError } = require("../shared/errors");
+const { validateFixedPayment } = require("../shared/validators");
 
 const TABLE_NAME = "fixedPayments";
 
@@ -13,25 +15,29 @@ app.http("fixedPayments-list", {
     const { authorized, user } = requireOwner(request);
     if (!authorized) return { status: 403 };
 
-    const client = getTableClient(TABLE_NAME);
-    const entities = [];
-    const iter = client.listEntities({
-      queryOptions: {
-        filter: `PartitionKey eq '${user.userId}'`,
-      },
-    });
-    for await (const entity of iter) {
-      entities.push({
-        id: entity.rowKey,
-        name: entity.name,
-        amount: entity.amount,
-        accountId: entity.accountId,
-        bonusMonths: entity.bonusMonths || "",
-        bonusAmount: entity.bonusAmount || 0,
-        createdAt: entity.createdAt,
+    try {
+      const client = getTableClient(TABLE_NAME);
+      const entities = [];
+      const iter = client.listEntities({
+        queryOptions: {
+          filter: `PartitionKey eq '${escapeODataString(user.userId)}'`,
+        },
       });
+      for await (const entity of iter) {
+        entities.push({
+          id: entity.rowKey,
+          name: entity.name,
+          amount: entity.amount,
+          accountId: entity.accountId,
+          bonusMonths: entity.bonusMonths || "",
+          bonusAmount: entity.bonusAmount || 0,
+          createdAt: entity.createdAt,
+        });
+      }
+      return { jsonBody: entities };
+    } catch (error) {
+      return handleError(error, context);
     }
-    return { jsonBody: entities };
   },
 });
 
@@ -43,34 +49,43 @@ app.http("fixedPayments-create", {
     const { authorized, user } = requireOwner(request);
     if (!authorized) return { status: 403 };
 
-    const body = await request.json();
-    const id = `fp_${uuidv4().substring(0, 8)}`;
-    const now = new Date().toISOString();
+    try {
+      const body = await request.json();
+      const validationErrors = validateFixedPayment(body);
+      if (validationErrors.length > 0) {
+        return { status: 400, jsonBody: { errors: validationErrors } };
+      }
 
-    const client = getTableClient(TABLE_NAME);
-    await client.createEntity({
-      partitionKey: user.userId,
-      rowKey: id,
-      name: body.name,
-      amount: body.amount || 0,
-      accountId: body.accountId || "",
-      bonusMonths: body.bonusMonths || "",
-      bonusAmount: body.bonusAmount || 0,
-      createdAt: now,
-    });
+      const id = `fp_${uuidv4()}`;
+      const now = new Date().toISOString();
 
-    return {
-      status: 201,
-      jsonBody: {
-        id,
+      const client = getTableClient(TABLE_NAME);
+      await client.createEntity({
+        partitionKey: user.userId,
+        rowKey: id,
         name: body.name,
-        amount: body.amount || 0,
-        accountId: body.accountId || "",
-        bonusMonths: body.bonusMonths || "",
-        bonusAmount: body.bonusAmount || 0,
+        amount: body.amount ?? 0,
+        accountId: body.accountId ?? "",
+        bonusMonths: body.bonusMonths ?? "",
+        bonusAmount: body.bonusAmount ?? 0,
         createdAt: now,
-      },
-    };
+      });
+
+      return {
+        status: 201,
+        jsonBody: {
+          id,
+          name: body.name,
+          amount: body.amount ?? 0,
+          accountId: body.accountId ?? "",
+          bonusMonths: body.bonusMonths ?? "",
+          bonusAmount: body.bonusAmount ?? 0,
+          createdAt: now,
+        },
+      };
+    } catch (error) {
+      return handleError(error, context);
+    }
   },
 });
 
@@ -82,33 +97,41 @@ app.http("fixedPayments-update", {
     const { authorized, user } = requireOwner(request);
     if (!authorized) return { status: 403 };
 
-    const id = request.params.id;
-    const body = await request.json();
+    try {
+      const id = request.params.id;
+      const body = await request.json();
+      const validationErrors = validateFixedPayment(body);
+      if (validationErrors.length > 0) {
+        return { status: 400, jsonBody: { errors: validationErrors } };
+      }
 
-    const client = getTableClient(TABLE_NAME);
-    await client.updateEntity(
-      {
-        partitionKey: user.userId,
-        rowKey: id,
-        name: body.name,
-        amount: body.amount,
-        accountId: body.accountId || "",
-        bonusMonths: body.bonusMonths || "",
-        bonusAmount: body.bonusAmount || 0,
-      },
-      "Merge"
-    );
+      const client = getTableClient(TABLE_NAME);
+      await client.updateEntity(
+        {
+          partitionKey: user.userId,
+          rowKey: id,
+          name: body.name,
+          amount: body.amount,
+          accountId: body.accountId ?? "",
+          bonusMonths: body.bonusMonths ?? "",
+          bonusAmount: body.bonusAmount ?? 0,
+        },
+        "Merge"
+      );
 
-    return {
-      jsonBody: {
-        id,
-        name: body.name,
-        amount: body.amount,
-        accountId: body.accountId || "",
-        bonusMonths: body.bonusMonths || "",
-        bonusAmount: body.bonusAmount || 0,
-      },
-    };
+      return {
+        jsonBody: {
+          id,
+          name: body.name,
+          amount: body.amount,
+          accountId: body.accountId ?? "",
+          bonusMonths: body.bonusMonths ?? "",
+          bonusAmount: body.bonusAmount ?? 0,
+        },
+      };
+    } catch (error) {
+      return handleError(error, context);
+    }
   },
 });
 
@@ -120,10 +143,14 @@ app.http("fixedPayments-delete", {
     const { authorized, user } = requireOwner(request);
     if (!authorized) return { status: 403 };
 
-    const id = request.params.id;
-    const client = getTableClient(TABLE_NAME);
-    await client.deleteEntity(user.userId, id);
+    try {
+      const id = request.params.id;
+      const client = getTableClient(TABLE_NAME);
+      await client.deleteEntity(user.userId, id);
 
-    return { status: 204 };
+      return { status: 204 };
+    } catch (error) {
+      return handleError(error, context);
+    }
   },
 });
