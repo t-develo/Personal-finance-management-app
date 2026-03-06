@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 
 const styles = {
   wrapper: {
@@ -25,10 +25,12 @@ const styles = {
 };
 
 export default function SelectField({ label, value, onChange, options }) {
+  const id = useId();
   return (
     <div style={styles.wrapper}>
-      <label style={styles.label}>{label}</label>
+      <label htmlFor={id} style={styles.label}>{label}</label>
       <select
+        id={id}
         style={styles.select}
         value={value}
         onChange={(e) => onChange(e.target.value)}

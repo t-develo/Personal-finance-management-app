@@ -3,6 +3,7 @@ import Modal from "./ui/Modal";
 import InputField from "./ui/InputField";
 import SelectField from "./ui/SelectField";
 import EmptyState from "./ui/EmptyState";
+import { useToast } from "../hooks/useToast";
 
 function fmt(n) {
   return "¥" + Number(n || 0).toLocaleString("ja-JP");
@@ -116,6 +117,7 @@ export default function FixedPaymentsTab({ data }) {
   const [accountId, setAccountId] = useState("");
   const [bonusMonths, setBonusMonths] = useState([]);
   const [bonusAmount, setBonusAmount] = useState("");
+  const showToast = useToast();
 
   const accountOptions = [
     { value: "", label: "未設定" },
@@ -147,24 +149,35 @@ export default function FixedPaymentsTab({ data }) {
   };
 
   const handleSubmit = async () => {
-    const payload = {
-      name,
-      amount: parseFloat(amount) || 0,
-      accountId,
-      bonusMonths: bonusMonths.join(","),
-      bonusAmount: parseFloat(bonusAmount) || 0,
-    };
-    if (modal.mode === "add") {
-      await addFixedPayment(payload);
-    } else {
-      await editFixedPayment(modal.item.id, payload);
+    try {
+      const payload = {
+        name,
+        amount: parseFloat(amount) || 0,
+        accountId,
+        bonusMonths: bonusMonths.join(","),
+        bonusAmount: parseFloat(bonusAmount) || 0,
+      };
+      if (modal.mode === "add") {
+        await addFixedPayment(payload);
+        showToast({ type: "success", message: "固定支払いを追加しました" });
+      } else {
+        await editFixedPayment(modal.item.id, payload);
+        showToast({ type: "success", message: "固定支払いを更新しました" });
+      }
+      setModal(null);
+    } catch (e) {
+      showToast({ type: "error", message: `操作に失敗しました: ${e.message}` });
     }
-    setModal(null);
   };
 
   const handleDelete = async (id) => {
     if (window.confirm("この固定支払いを削除しますか？")) {
-      await removeFixedPayment(id);
+      try {
+        await removeFixedPayment(id);
+        showToast({ type: "success", message: "固定支払いを削除しました" });
+      } catch (e) {
+        showToast({ type: "error", message: `削除に失敗しました: ${e.message}` });
+      }
     }
   };
 
@@ -247,7 +260,7 @@ export default function FixedPaymentsTab({ data }) {
                     borderRadius: 6,
                     border: "1px solid #2a3040",
                     cursor: "pointer",
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: 500,
                     background: bonusMonths.includes(m) ? "#4f8cff" : "#1e2530",
                     color: bonusMonths.includes(m) ? "#fff" : "#8b95a5",

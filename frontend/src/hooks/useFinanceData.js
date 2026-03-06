@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import * as api from "../api/client";
 
+const DATA_LABELS = ["口座", "固定支払い", "クレジットカード", "月次記録"];
+
 export function useFinanceData(yearMonth) {
   const [accounts, setAccounts] = useState([]);
   const [fixedPayments, setFixedPayments] = useState([]);
@@ -10,25 +12,28 @@ export function useFinanceData(yearMonth) {
     cardPayments: {},
   });
   const [loading, setLoading] = useState(true);
+  const [loadErrors, setLoadErrors] = useState([]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    try {
-      const [accs, fps, ccs, mr] = await Promise.all([
-        api.getAccounts(),
-        api.getFixedPayments(),
-        api.getCreditCards(),
-        api.getMonthlyRecords(yearMonth),
-      ]);
-      setAccounts(accs);
-      setFixedPayments(fps);
-      setCreditCards(ccs);
-      setMonthlyRecords(mr);
-    } catch (e) {
-      console.error("Failed to load data:", e);
-    } finally {
-      setLoading(false);
-    }
+    setLoadErrors([]);
+    const results = await Promise.allSettled([
+      api.getAccounts(),
+      api.getFixedPayments(),
+      api.getCreditCards(),
+      api.getMonthlyRecords(yearMonth),
+    ]);
+    const setters = [setAccounts, setFixedPayments, setCreditCards, setMonthlyRecords];
+    const errors = [];
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        setters[index](result.value);
+      } else {
+        errors.push(`${DATA_LABELS[index]}の読み込みに失敗しました`);
+      }
+    });
+    setLoadErrors(errors);
+    setLoading(false);
   }, [yearMonth]);
 
   useEffect(() => {
@@ -123,6 +128,7 @@ export function useFinanceData(yearMonth) {
     creditCards,
     monthlyRecords,
     loading,
+    loadErrors,
     reload: loadAll,
     addAccount,
     editAccount,

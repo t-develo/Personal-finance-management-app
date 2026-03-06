@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 
 const styles = {
   wrapper: {
@@ -32,10 +32,12 @@ export default function InputField({
   required,
   step,
 }) {
+  const id = useId();
   return (
     <div style={styles.wrapper}>
-      <label style={styles.label}>{label}</label>
+      <label htmlFor={id} style={styles.label}>{label}</label>
       <input
+        id={id}
         style={styles.input}
         type={type}
         value={value}

@@ -3,6 +3,7 @@ import Modal from "./ui/Modal";
 import InputField from "./ui/InputField";
 import SelectField from "./ui/SelectField";
 import EmptyState from "./ui/EmptyState";
+import { useToast } from "../hooks/useToast";
 
 const styles = {
   header: {
@@ -85,6 +86,7 @@ export default function CreditCardsTab({ data }) {
   const [modal, setModal] = useState(null);
   const [name, setName] = useState("");
   const [accountId, setAccountId] = useState("");
+  const showToast = useToast();
 
   const accountOptions = [
     { value: "", label: "未設定" },
@@ -104,18 +106,29 @@ export default function CreditCardsTab({ data }) {
   };
 
   const handleSubmit = async () => {
-    const payload = { name, accountId };
-    if (modal.mode === "add") {
-      await addCreditCard(payload);
-    } else {
-      await editCreditCard(modal.item.id, payload);
+    try {
+      const payload = { name, accountId };
+      if (modal.mode === "add") {
+        await addCreditCard(payload);
+        showToast({ type: "success", message: "カードを追加しました" });
+      } else {
+        await editCreditCard(modal.item.id, payload);
+        showToast({ type: "success", message: "カードを更新しました" });
+      }
+      setModal(null);
+    } catch (e) {
+      showToast({ type: "error", message: `操作に失敗しました: ${e.message}` });
     }
-    setModal(null);
   };
 
   const handleDelete = async (id) => {
     if (window.confirm("このクレジットカードを削除しますか？")) {
-      await removeCreditCard(id);
+      try {
+        await removeCreditCard(id);
+        showToast({ type: "success", message: "カードを削除しました" });
+      } catch (e) {
+        showToast({ type: "error", message: `削除に失敗しました: ${e.message}` });
+      }
     }
   };
 

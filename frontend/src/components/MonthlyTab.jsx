@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useToast } from "../hooks/useToast";
 
 function fmt(n) {
   return "¥" + Number(n || 0).toLocaleString("ja-JP");
@@ -91,21 +92,15 @@ const styles = {
     outline: "none",
   },
   placeholder: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#6b7585",
     marginTop: 2,
-  },
-  saved: {
-    fontSize: 12,
-    color: "#6ee7a0",
-    marginLeft: 8,
-    opacity: 0,
-    transition: "opacity 0.3s",
   },
 };
 
 export default function MonthlyTab({ data, yearMonth, setYearMonth }) {
   const { accounts, creditCards, monthlyRecords, saveMonthly } = data;
+  const showToast = useToast();
 
   const [balances, setBalances] = useState({});
   const [cardAmounts, setCardAmounts] = useState({});
@@ -118,19 +113,30 @@ export default function MonthlyTab({ data, yearMonth, setYearMonth }) {
     setCardAmounts(monthlyRecords.cardPayments || {});
   }, [monthlyRecords]);
 
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   const save = useCallback(
     (newBalances, newCards) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
-        await saveMonthly({
-          accountBalances: newBalances,
-          cardPayments: newCards,
-        });
-        setSavedIndicator(Date.now());
-        setTimeout(() => setSavedIndicator(null), 1500);
+        try {
+          await saveMonthly({
+            accountBalances: newBalances,
+            cardPayments: newCards,
+          });
+          setSavedIndicator(Date.now());
+          setTimeout(() => setSavedIndicator(null), 1500);
+        } catch (e) {
+          showToast({ type: "error", message: `保存に失敗しました: ${e.message}` });
+        }
       }, 800);
     },
-    [saveMonthly]
+    [saveMonthly, showToast]
   );
 
   const handleBalanceChange = (accId, val) => {
@@ -165,6 +171,7 @@ export default function MonthlyTab({ data, yearMonth, setYearMonth }) {
           <button
             style={styles.monthBtn}
             onClick={() => setYearMonth(shiftMonth(yearMonth, -1))}
+            aria-label="前月"
           >
             ◀
           </button>
@@ -172,6 +179,7 @@ export default function MonthlyTab({ data, yearMonth, setYearMonth }) {
           <button
             style={styles.monthBtn}
             onClick={() => setYearMonth(shiftMonth(yearMonth, 1))}
+            aria-label="翌月"
           >
             ▶
           </button>
@@ -214,6 +222,7 @@ export default function MonthlyTab({ data, yearMonth, setYearMonth }) {
                 onChange={(e) => handleBalanceChange(acc.id, e.target.value)}
                 placeholder={String(acc.balance || 0)}
                 step="1"
+                aria-label={`${acc.name}の残高`}
               />
             </div>
           ))
@@ -238,6 +247,7 @@ export default function MonthlyTab({ data, yearMonth, setYearMonth }) {
                 onChange={(e) => handleCardChange(cc.id, e.target.value)}
                 placeholder="0"
                 step="1"
+                aria-label={`${cc.name}の支払額`}
               />
             </div>
           ))

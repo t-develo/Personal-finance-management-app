@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Modal from "./ui/Modal";
 import InputField from "./ui/InputField";
 import EmptyState from "./ui/EmptyState";
+import { useToast } from "../hooks/useToast";
 
 function fmt(n) {
   return "¥" + Number(n || 0).toLocaleString("ja-JP");
@@ -80,9 +81,10 @@ const styles = {
 
 export default function AccountsTab({ data }) {
   const { accounts, addAccount, editAccount, removeAccount } = data;
-  const [modal, setModal] = useState(null); // null | { mode: 'add' | 'edit', item? }
+  const [modal, setModal] = useState(null);
   const [name, setName] = useState("");
   const [balance, setBalance] = useState("");
+  const showToast = useToast();
 
   const openAdd = () => {
     setName("");
@@ -97,18 +99,29 @@ export default function AccountsTab({ data }) {
   };
 
   const handleSubmit = async () => {
-    const payload = { name, balance: parseFloat(balance) || 0 };
-    if (modal.mode === "add") {
-      await addAccount(payload);
-    } else {
-      await editAccount(modal.item.id, payload);
+    try {
+      const payload = { name, balance: parseFloat(balance) || 0 };
+      if (modal.mode === "add") {
+        await addAccount(payload);
+        showToast({ type: "success", message: "口座を追加しました" });
+      } else {
+        await editAccount(modal.item.id, payload);
+        showToast({ type: "success", message: "口座を更新しました" });
+      }
+      setModal(null);
+    } catch (e) {
+      showToast({ type: "error", message: `操作に失敗しました: ${e.message}` });
     }
-    setModal(null);
   };
 
   const handleDelete = async (id) => {
     if (window.confirm("この口座を削除しますか？紐付く固定支払いの引落口座設定も解除されます。")) {
-      await removeAccount(id);
+      try {
+        await removeAccount(id);
+        showToast({ type: "success", message: "口座を削除しました" });
+      } catch (e) {
+        showToast({ type: "error", message: `削除に失敗しました: ${e.message}` });
+      }
     }
   };
 

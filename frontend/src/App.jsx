@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { fetchUser } from "./api/client";
 import { useFinanceData } from "./hooks/useFinanceData";
+import { ToastProvider } from "./hooks/useToast";
 import Dashboard from "./components/Dashboard";
 import AccountsTab from "./components/AccountsTab";
 import FixedPaymentsTab from "./components/FixedPaymentsTab";
@@ -32,7 +33,7 @@ function formatYearMonth(ym) {
 }
 
 /* ─────────────────────────────────────────────
-   Layout CSS — inline style は使わず class で制御
+   Layout CSS
    ───────────────────────────────────────────── */
 const layoutCSS = `
   /* === Desktop (default) === */
@@ -115,10 +116,39 @@ const layoutCSS = `
       min-height: 0;
     }
   }
+
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    z-index: 9999;
+  }
+  .skip-link:focus {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    width: auto;
+    height: auto;
+    padding: 8px 16px;
+    background: #4f8cff;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 9999;
+    text-decoration: none;
+  }
+
+  @keyframes toast-slide-in {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
 `;
 
 /* ─────────────────────────────────────
-   Decorative inline styles (colours etc.)
+   Decorative inline styles
    ───────────────────────────────────── */
 const styles = {
   sidebarHeader: {
@@ -130,6 +160,7 @@ const styles = {
     fontWeight: 700,
     color: "#e4e8ef",
     letterSpacing: "0.5px",
+    margin: 0,
   },
   nav: {
     flex: 1,
@@ -145,16 +176,22 @@ const styles = {
     background: active ? "#1e2530" : "transparent",
     color: active ? "#fff" : "#8b95a5",
     borderLeft: active ? "3px solid #4f8cff" : "3px solid transparent",
+    borderRight: "none",
+    borderTop: "none",
+    borderBottom: "none",
     fontSize: 14,
     fontWeight: active ? 500 : 400,
     transition: "all 0.15s",
+    width: "100%",
+    textAlign: "left",
+    fontFamily: "inherit",
   }),
   monthSelector: {
     padding: "16px",
     borderTop: "1px solid #1e2530",
   },
   monthLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: "#6b7585",
     textTransform: "uppercase",
     marginBottom: 8,
@@ -198,7 +235,7 @@ const styles = {
   logoutLink: {
     color: "#4f8cff",
     textDecoration: "none",
-    fontSize: 12,
+    fontSize: 13,
   },
   hamburger: {
     background: "none",
@@ -214,7 +251,7 @@ const styles = {
   },
 };
 
-export default function App() {
+function AppContent() {
   const [tab, setTab] = useState("dashboard");
   const [yearMonth, setYearMonth] = useState(getInitialYearMonth);
   const [user, setUser] = useState(null);
@@ -234,18 +271,19 @@ export default function App() {
   const sidebarContent = (
     <>
       <div style={styles.sidebarHeader}>
-        <div style={styles.appTitle}>家計管理</div>
+        <h1 style={styles.appTitle}>家計管理</h1>
       </div>
-      <nav style={styles.nav}>
+      <nav style={styles.nav} aria-label="メインナビゲーション">
         {TABS.map((t) => (
-          <div
+          <button
             key={t.id}
             style={styles.navItem(tab === t.id)}
             onClick={() => selectTab(t.id)}
+            aria-current={tab === t.id ? "page" : undefined}
           >
-            <span>{t.icon}</span>
+            <span aria-hidden="true">{t.icon}</span>
             <span>{t.label}</span>
-          </div>
+          </button>
         ))}
       </nav>
       <div style={styles.monthSelector}>
@@ -254,6 +292,7 @@ export default function App() {
           <button
             style={styles.monthBtn}
             onClick={() => setYearMonth((ym) => shiftMonth(ym, -1))}
+            aria-label="前月"
           >
             ◀
           </button>
@@ -261,6 +300,7 @@ export default function App() {
           <button
             style={styles.monthBtn}
             onClick={() => setYearMonth((ym) => shiftMonth(ym, 1))}
+            aria-label="翌月"
           >
             ▶
           </button>
@@ -280,10 +320,17 @@ export default function App() {
   return (
     <>
       <style>{layoutCSS}</style>
+      <a href="#main-content" className="skip-link">
+        メインコンテンツへスキップ
+      </a>
       <div className="app-layout">
-        {/* Mobile header — CSS controls visibility */}
+        {/* Mobile header */}
         <header className="mobile-header">
-          <button style={styles.hamburger} onClick={() => setMenuOpen(!menuOpen)}>
+          <button
+            style={styles.hamburger}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="メニューを開く"
+          >
             ☰
           </button>
           <span style={{ fontWeight: 700, fontSize: 16 }}>家計管理</span>
@@ -298,13 +345,13 @@ export default function App() {
           onClick={() => setMenuOpen(false)}
         />
 
-        {/* Sidebar — NO inline style for layout props */}
+        {/* Sidebar */}
         <aside className={`app-sidebar${menuOpen ? " open" : ""}`}>
           {sidebarContent}
         </aside>
 
         {/* Main content */}
-        <main className="app-main">
+        <main id="main-content" className="app-main">
           {tab === "dashboard" && <Dashboard data={data} yearMonth={yearMonth} />}
           {tab === "accounts" && <AccountsTab data={data} />}
           {tab === "fixed" && <FixedPaymentsTab data={data} />}
@@ -319,5 +366,13 @@ export default function App() {
         </main>
       </div>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }

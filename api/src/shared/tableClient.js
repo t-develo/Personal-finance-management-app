@@ -12,4 +12,8 @@ function getTableClient(tableName) {
   );
 }
 
-module.exports = { getTableClient };
+function escapeODataString(value) {
+  return String(value).replace(/'/g, "''");
+}
+
+module.exports = { getTableClient, escapeODataString };
