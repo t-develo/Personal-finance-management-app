@@ -1,16 +1,5 @@
 import React from "react";
-
-function fmt(n) {
-  return "¥" + Number(n || 0).toLocaleString("ja-JP");
-}
-
-function parseBonusMonths(str) {
-  if (!str) return [];
-  return str
-    .split(",")
-    .map(Number)
-    .filter((n) => n >= 1 && n <= 12);
-}
+import { fmt, parseBonusMonths } from "../utils/finance";
 
 const dashboardCSS = `
   .summary-grid {

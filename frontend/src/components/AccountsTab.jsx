@@ -3,10 +3,7 @@ import Modal from "./ui/Modal";
 import InputField from "./ui/InputField";
 import EmptyState from "./ui/EmptyState";
 import { useToast } from "../hooks/useToast";
-
-function fmt(n) {
-  return "¥" + Number(n || 0).toLocaleString("ja-JP");
-}
+import { fmt } from "../utils/finance";
 
 const styles = {
   header: {
@@ -84,6 +81,7 @@ export default function AccountsTab({ data }) {
   const [modal, setModal] = useState(null);
   const [name, setName] = useState("");
   const [balance, setBalance] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const showToast = useToast();
 
   const openAdd = () => {
@@ -99,6 +97,7 @@ export default function AccountsTab({ data }) {
   };
 
   const handleSubmit = async () => {
+    setSubmitting(true);
     try {
       const payload = { name, balance: parseFloat(balance) || 0 };
       if (modal.mode === "add") {
@@ -111,6 +110,8 @@ export default function AccountsTab({ data }) {
       setModal(null);
     } catch (e) {
       showToast({ type: "error", message: `操作に失敗しました: ${e.message}` });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -161,8 +162,9 @@ export default function AccountsTab({ data }) {
       {modal && (
         <Modal
           title={modal.mode === "add" ? "口座を追加" : "口座を編集"}
-          onClose={() => setModal(null)}
+          onClose={() => !submitting && setModal(null)}
           onSubmit={handleSubmit}
+          submitting={submitting}
         >
           <InputField
             label="口座名"

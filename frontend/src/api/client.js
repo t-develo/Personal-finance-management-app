@@ -10,7 +10,7 @@ async function request(url, options = {}) {
   });
 
   if (res.status === 401 || res.status === 403) {
-    window.location.href = "/.auth/login/github";
+    window.location.href = "/.auth/login";
     throw new Error("Unauthorized");
   }
 

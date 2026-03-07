@@ -7,6 +7,7 @@ import AccountsTab from "./components/AccountsTab";
 import FixedPaymentsTab from "./components/FixedPaymentsTab";
 import CreditCardsTab from "./components/CreditCardsTab";
 import MonthlyTab from "./components/MonthlyTab";
+import { formatYearMonth, shiftMonth } from "./utils/finance";
 
 const TABS = [
   { id: "dashboard", label: "ダッシュボード", icon: "📊" },
@@ -19,17 +20,6 @@ const TABS = [
 function getInitialYearMonth() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function shiftMonth(ym, delta) {
-  const [y, m] = ym.split("-").map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function formatYearMonth(ym) {
-  const [y, m] = ym.split("-");
-  return `${y}年${parseInt(m)}月`;
 }
 
 /* ─────────────────────────────────────────────
@@ -329,7 +319,9 @@ function AppContent() {
           <button
             style={styles.hamburger}
             onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="メニューを開く"
+            aria-label={menuOpen ? "メニューを閉じる" : "メニューを開く"}
+            aria-expanded={menuOpen}
+            aria-controls="app-sidebar"
           >
             ☰
           </button>
@@ -346,7 +338,7 @@ function AppContent() {
         />
 
         {/* Sidebar */}
-        <aside className={`app-sidebar${menuOpen ? " open" : ""}`}>
+        <aside id="app-sidebar" className={`app-sidebar${menuOpen ? " open" : ""}`}>
           {sidebarContent}
         </aside>
 

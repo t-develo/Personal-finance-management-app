@@ -4,20 +4,9 @@ import InputField from "./ui/InputField";
 import SelectField from "./ui/SelectField";
 import EmptyState from "./ui/EmptyState";
 import { useToast } from "../hooks/useToast";
-
-function fmt(n) {
-  return "¥" + Number(n || 0).toLocaleString("ja-JP");
-}
+import { fmt, parseBonusMonths } from "../utils/finance";
 
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-
-function parseBonusMonths(str) {
-  if (!str) return [];
-  return str
-    .split(",")
-    .map(Number)
-    .filter((n) => n >= 1 && n <= 12);
-}
 
 const styles = {
   header: {
@@ -117,6 +106,7 @@ export default function FixedPaymentsTab({ data }) {
   const [accountId, setAccountId] = useState("");
   const [bonusMonths, setBonusMonths] = useState([]);
   const [bonusAmount, setBonusAmount] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const showToast = useToast();
 
   const accountOptions = [
@@ -149,6 +139,7 @@ export default function FixedPaymentsTab({ data }) {
   };
 
   const handleSubmit = async () => {
+    setSubmitting(true);
     try {
       const payload = {
         name,
@@ -167,6 +158,8 @@ export default function FixedPaymentsTab({ data }) {
       setModal(null);
     } catch (e) {
       showToast({ type: "error", message: `操作に失敗しました: ${e.message}` });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -223,8 +216,9 @@ export default function FixedPaymentsTab({ data }) {
       {modal && (
         <Modal
           title={modal.mode === "add" ? "固定支払いを追加" : "固定支払いを編集"}
-          onClose={() => setModal(null)}
+          onClose={() => !submitting && setModal(null)}
           onSubmit={handleSubmit}
+          submitting={submitting}
         >
           <InputField
             label="項目名"

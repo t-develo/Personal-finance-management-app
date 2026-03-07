@@ -86,6 +86,7 @@ export default function CreditCardsTab({ data }) {
   const [modal, setModal] = useState(null);
   const [name, setName] = useState("");
   const [accountId, setAccountId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const showToast = useToast();
 
   const accountOptions = [
@@ -106,6 +107,7 @@ export default function CreditCardsTab({ data }) {
   };
 
   const handleSubmit = async () => {
+    setSubmitting(true);
     try {
       const payload = { name, accountId };
       if (modal.mode === "add") {
@@ -118,6 +120,8 @@ export default function CreditCardsTab({ data }) {
       setModal(null);
     } catch (e) {
       showToast({ type: "error", message: `操作に失敗しました: ${e.message}` });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -177,8 +181,9 @@ export default function CreditCardsTab({ data }) {
       {modal && (
         <Modal
           title={modal.mode === "add" ? "カードを追加" : "カードを編集"}
-          onClose={() => setModal(null)}
+          onClose={() => !submitting && setModal(null)}
           onSubmit={handleSubmit}
+          submitting={submitting}
         >
           <InputField
             label="カード名"

@@ -6,6 +6,10 @@ const { validateYearMonth, validateMonthlyRecords } = require("../shared/validat
 
 const TABLE_NAME = "monthlyRecords";
 
+// authLevel "anonymous" は Azure SWA のエッジ認証に委任するための設定。
+// アクセス制御は staticwebapp.config.json の routes (allowedRoles: ["owner"]) と
+// 各ハンドラ内の requireOwner() で実施している。
+
 app.http("monthlyRecords-get", {
   methods: ["GET"],
   authLevel: "anonymous",

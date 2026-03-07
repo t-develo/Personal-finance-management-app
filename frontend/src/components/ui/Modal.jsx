@@ -78,7 +78,7 @@ const styles = {
   },
 };
 
-export default function Modal({ title, onClose, onSubmit, submitLabel, children }) {
+export default function Modal({ title, onClose, onSubmit, submitLabel, submitting, children }) {
   const modalRef = useRef(null);
 
   useEffect(() => {
@@ -142,8 +142,8 @@ export default function Modal({ title, onClose, onSubmit, submitLabel, children 
             <button type="button" style={styles.btnSecondary} onClick={onClose}>
               キャンセル
             </button>
-            <button type="submit" style={styles.btnPrimary}>
-              {submitLabel || "保存"}
+            <button type="submit" style={styles.btnPrimary} disabled={submitting}>
+              {submitting ? "保存中..." : (submitLabel || "保存")}
             </button>
           </div>
         </form>

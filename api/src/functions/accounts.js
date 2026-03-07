@@ -7,6 +7,10 @@ const { validateAccount } = require("../shared/validators");
 
 const TABLE_NAME = "accounts";
 
+// authLevel "anonymous" は Azure SWA のエッジ認証に委任するための設定。
+// アクセス制御は staticwebapp.config.json の routes (allowedRoles: ["owner"]) と
+// 各ハンドラ内の requireOwner() で実施している。
+
 app.http("accounts-list", {
   methods: ["GET"],
   authLevel: "anonymous",
