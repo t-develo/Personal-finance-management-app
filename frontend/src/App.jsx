@@ -225,6 +225,47 @@ const styles = {
     fontWeight: 500,
     color: "#e4e8ef",
   },
+  modeSection: {
+    padding: "12px 16px",
+    borderTop: "1px solid #1e2530",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  modeLabel: {
+    fontSize: 11,
+    color: "#6b7585",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  modeBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    padding: "8px 12px",
+    background: "#1e2530",
+    border: "1px solid #2a3040",
+    borderRadius: 8,
+    color: "#e4e8ef",
+    fontSize: 13,
+    fontWeight: 500,
+    textDecoration: "none",
+    cursor: "pointer",
+    minHeight: 36,
+    fontFamily: "inherit",
+  },
+  modeBtnPrimary: {
+    background: "#4f8cff",
+    border: "1px solid #4f8cff",
+    color: "#fff",
+  },
+  modeBtnSubtle: {
+    background: "transparent",
+    border: "1px solid #2a3040",
+    color: "#8b95a5",
+    fontSize: 12,
+  },
   userSection: {
     padding: "12px 16px",
     borderTop: "1px solid #1e2530",
@@ -326,6 +367,23 @@ function AppContent() {
             ▶
           </button>
         </div>
+      </div>
+      <div style={styles.modeSection}>
+        <div style={styles.modeLabel}>モード</div>
+        {isDemoMode() ? (
+          <a href="/" style={styles.modeBtn}>
+            ← 通常モードに戻る
+          </a>
+        ) : (
+          <>
+            <a href="?demo=1" style={{ ...styles.modeBtn, ...styles.modeBtnPrimary }}>
+              🎬 デモモードで表示
+            </a>
+            <a href="?view=mockup" style={{ ...styles.modeBtn, ...styles.modeBtnSubtle }}>
+              全画面プレビュー
+            </a>
+          </>
+        )}
       </div>
       {user && (
         <div style={styles.userSection}>
