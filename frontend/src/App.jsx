@@ -7,6 +7,8 @@ import AccountsTab from "./components/AccountsTab";
 import FixedPaymentsTab from "./components/FixedPaymentsTab";
 import CreditCardsTab from "./components/CreditCardsTab";
 import MonthlyTab from "./components/MonthlyTab";
+import { isDemoMode, isMockupView } from "./demo/demoMode";
+import MockupPage from "./demo/MockupPage";
 
 const TABS = [
   { id: "dashboard", label: "ダッシュボード", icon: "📊" },
@@ -271,7 +273,26 @@ function AppContent() {
   const sidebarContent = (
     <>
       <div style={styles.sidebarHeader}>
-        <h1 style={styles.appTitle}>家計管理</h1>
+        <h1 style={styles.appTitle}>
+          家計管理
+          {isDemoMode() && (
+            <span
+              style={{
+                marginLeft: 8,
+                fontSize: 10,
+                fontWeight: 700,
+                background: "#4f8cff",
+                color: "#fff",
+                padding: "2px 6px",
+                borderRadius: 4,
+                verticalAlign: "middle",
+                letterSpacing: "0.5px",
+              }}
+            >
+              DEMO
+            </span>
+          )}
+        </h1>
       </div>
       <nav style={styles.nav} aria-label="メインナビゲーション">
         {TABS.map((t) => (
@@ -370,6 +391,13 @@ function AppContent() {
 }
 
 export default function App() {
+  if (isMockupView()) {
+    return (
+      <ToastProvider>
+        <MockupPage />
+      </ToastProvider>
+    );
+  }
   return (
     <ToastProvider>
       <AppContent />
