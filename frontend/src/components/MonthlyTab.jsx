@@ -86,7 +86,7 @@ const styles = {
     border: "1px solid #2a3040",
     borderRadius: 8,
     color: "#e4e8ef",
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: "'DM Mono', monospace",
     textAlign: "right",
     outline: "none",
@@ -218,6 +218,7 @@ export default function MonthlyTab({ data, yearMonth, setYearMonth }) {
               <input
                 style={styles.input}
                 type="number"
+                inputMode="numeric"
                 value={balances[acc.id] != null ? balances[acc.id] : ""}
                 onChange={(e) => handleBalanceChange(acc.id, e.target.value)}
                 placeholder={String(acc.balance || 0)}
@@ -243,6 +244,7 @@ export default function MonthlyTab({ data, yearMonth, setYearMonth }) {
               <input
                 style={styles.input}
                 type="number"
+                inputMode="numeric"
                 value={cardAmounts[cc.id] != null ? cardAmounts[cc.id] : ""}
                 onChange={(e) => handleCardChange(cc.id, e.target.value)}
                 placeholder="0"
