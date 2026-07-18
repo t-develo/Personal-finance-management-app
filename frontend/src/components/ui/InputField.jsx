@@ -18,7 +18,7 @@ const styles = {
     border: "1px solid #2a3040",
     borderRadius: 8,
     color: "#e4e8ef",
-    fontSize: 14,
+    fontSize: 16,
     outline: "none",
   },
 };
@@ -40,6 +40,7 @@ export default function InputField({
         id={id}
         style={styles.input}
         type={type}
+        inputMode={type === "number" ? "numeric" : undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
