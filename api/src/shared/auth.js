@@ -2,7 +2,8 @@ function getUserInfo(request) {
   const header = request.headers.get("x-ms-client-principal");
   if (!header) return null;
   const encoded = Buffer.from(header, "base64");
-  const clientPrincipal = JSON.parse(encoded.toString("ascii"));
+  // principal は UTF-8 の JSON。"ascii" で読むと非 ASCII の userDetails が壊れる。
+  const clientPrincipal = JSON.parse(encoded.toString("utf8"));
   return {
     userId: clientPrincipal.userId,
     identityProvider: clientPrincipal.identityProvider,

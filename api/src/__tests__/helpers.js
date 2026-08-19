@@ -40,40 +40,35 @@ function createMockContext() {
   };
 }
 
-function createMockTableClient() {
+// api/src/shared/store.js が公開する 7 メソッドのモック。
+// list 系は既定で空配列を返す。
+function createMockStore() {
   return {
-    createEntity: jest.fn().mockResolvedValue({}),
-    updateEntity: jest.fn().mockResolvedValue({}),
-    deleteEntity: jest.fn().mockResolvedValue({}),
-    upsertEntity: jest.fn().mockResolvedValue({}),
-    listEntities: jest.fn().mockReturnValue({
-      [Symbol.asyncIterator]: () => ({
-        next: jest.fn().mockResolvedValue({ done: true }),
-      }),
-    }),
+    list: jest.fn().mockResolvedValue([]),
+    listByField: jest.fn().mockResolvedValue([]),
+    listByRowKeyPrefix: jest.fn().mockResolvedValue([]),
+    create: jest.fn().mockResolvedValue(undefined),
+    merge: jest.fn().mockResolvedValue(undefined),
+    upsert: jest.fn().mockResolvedValue(undefined),
+    remove: jest.fn().mockResolvedValue(undefined),
   };
 }
 
-function createAsyncIterable(items) {
-  return {
-    [Symbol.asyncIterator]: () => {
-      let index = 0;
-      return {
-        next: () => {
-          if (index < items.length) {
-            return Promise.resolve({ value: items[index++], done: false });
-          }
-          return Promise.resolve({ done: true });
-        },
-      };
-    },
-  };
+// clearAllMocks() 後は mockResolvedValue も消えるため、既定の戻り値を張り直す。
+function resetMockStore(store) {
+  store.list.mockResolvedValue([]);
+  store.listByField.mockResolvedValue([]);
+  store.listByRowKeyPrefix.mockResolvedValue([]);
+  store.create.mockResolvedValue(undefined);
+  store.merge.mockResolvedValue(undefined);
+  store.upsert.mockResolvedValue(undefined);
+  store.remove.mockResolvedValue(undefined);
 }
 
 module.exports = {
   createAuthenticatedRequest,
   createUnauthenticatedRequest,
   createMockContext,
-  createMockTableClient,
-  createAsyncIterable,
+  createMockStore,
+  resetMockStore,
 };

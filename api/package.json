@@ -4,17 +4,28 @@
   "main": "src/functions/*.js",
   "scripts": {
     "start": "func start",
+    "start:local": "node src/local/server.js",
+    "migrate:export": "node scripts/export-azure.js",
+    "migrate:import": "node scripts/import-sqlite.js",
+    "migrate:verify": "node scripts/verify-migration.js",
     "test": "jest"
   },
   "dependencies": {
     "@azure/data-tables": "^13.2.0",
     "@azure/functions": "^4.5.0",
+    "express": "^4.22.2",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
     "jest": "^29.7.0"
   },
   "jest": {
-    "testPathIgnorePatterns": ["/node_modules/", "helpers\\.js$"]
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "helpers\\.js$"
+    ]
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.10.0"
   }
 }

@@ -4,8 +4,8 @@ const {
   createAuthenticatedRequest,
   createUnauthenticatedRequest,
   createMockContext,
-  createMockTableClient,
-  createAsyncIterable,
+  createMockStore,
+  resetMockStore,
 } = require("./helpers");
 
 const handlers = {};
@@ -17,17 +17,14 @@ jest.mock("@azure/functions", () => ({
   },
 }));
 
-const mockTableClient = createMockTableClient();
-jest.mock("../shared/tableClient", () => ({
-  getTableClient: () => mockTableClient,
-  escapeODataString: (v) => String(v).replace(/'/g, "''"),
-}));
+const mockStore = createMockStore();
+jest.mock("../shared/store", () => mockStore);
 
 require("../functions/monthlyRecords");
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockTableClient.listEntities.mockReturnValue(createAsyncIterable([]));
+  resetMockStore(mockStore);
 });
 
 describe("monthlyRecords-get", () => {
@@ -40,15 +37,18 @@ describe("monthlyRecords-get", () => {
   });
 
   it("正常にデータを返す", async () => {
-    mockTableClient.listEntities.mockReturnValue(
-      createAsyncIterable([
-        { recordType: "accountBalance", targetId: "acc_1", amount: 100000 },
-        { recordType: "cardPayment", targetId: "cc_1", amount: 50000 },
-      ])
-    );
+    mockStore.listByRowKeyPrefix.mockResolvedValue([
+      { recordType: "accountBalance", targetId: "acc_1", amount: 100000 },
+      { recordType: "cardPayment", targetId: "cc_1", amount: 50000 },
+    ]);
     const req = createAuthenticatedRequest("GET", undefined, { yearMonth: "2025-01" });
     req.json = jest.fn();
     const result = await handler(req, createMockContext());
+    expect(mockStore.listByRowKeyPrefix).toHaveBeenCalledWith(
+      "monthlyRecords",
+      "user-test123",
+      "2025-01"
+    );
     expect(result.jsonBody.yearMonth).toBe("2025-01");
     expect(result.jsonBody.accountBalances.acc_1).toBe(100000);
     expect(result.jsonBody.cardPayments.cc_1).toBe(50000);
@@ -61,7 +61,7 @@ describe("monthlyRecords-get", () => {
     expect(result.status).toBe(400);
   });
 
-  it("ODataインジェクション風文字列で400を返す", async () => {
+  it("インジェクション風文字列で400を返す", async () => {
     const req = createAuthenticatedRequest("GET", undefined, { yearMonth: "' or 1 eq 1 or '" });
     req.json = jest.fn();
     const result = await handler(req, createMockContext());
@@ -80,7 +80,15 @@ describe("monthlyRecords-put", () => {
     );
     const result = await handler(req, createMockContext());
     expect(result.jsonBody.yearMonth).toBe("2025-01");
-    expect(mockTableClient.upsertEntity).toHaveBeenCalledTimes(2);
+    expect(mockStore.upsert).toHaveBeenCalledTimes(2);
+    expect(mockStore.upsert).toHaveBeenCalledWith("monthlyRecords", {
+      partitionKey: "user-test123",
+      rowKey: "2025-01_balance_acc_1",
+      recordType: "accountBalance",
+      targetId: "acc_1",
+      amount: 200000,
+      yearMonth: "2025-01",
+    });
   });
 
   it("不正なyearMonthで400を返す", async () => {
@@ -103,7 +111,7 @@ describe("monthlyRecords-put", () => {
     const req = createAuthenticatedRequest("PUT", {}, { yearMonth: "2025-01" });
     const result = await handler(req, createMockContext());
     expect(result.jsonBody.yearMonth).toBe("2025-01");
-    expect(mockTableClient.upsertEntity).not.toHaveBeenCalled();
+    expect(mockStore.upsert).not.toHaveBeenCalled();
   });
 
   it("不正なJSONで400を返す", async () => {

@@ -1,5 +1,16 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+
+// フォントは CDN ではなくバンドルに同梱する。
+// ラズパイがインターネットに出られなくても表示が崩れない。
+// 各 CSS は unicode-range 付きのサブセットに分かれており、
+// ブラウザは実際に使う範囲だけをダウンロードする。
+import "@fontsource/noto-sans-jp/400.css";
+import "@fontsource/noto-sans-jp/500.css";
+import "@fontsource/noto-sans-jp/700.css";
+import "@fontsource/dm-mono/400.css";
+import "@fontsource/dm-mono/500.css";
+
 import App from "./App";
 
 const globalStyles = `

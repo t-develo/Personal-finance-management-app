@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { v4: uuidv4 } = require("uuid");
-const { getTableClient, escapeODataString } = require("../shared/tableClient");
+const store = require("../shared/store");
 const { requireOwner } = require("../shared/auth");
 const { handleError } = require("../shared/errors");
 const { validateFixedPayment } = require("../shared/validators");
@@ -16,15 +16,9 @@ app.http("fixedPayments-list", {
     if (!authorized) return { status: 403 };
 
     try {
-      const client = getTableClient(TABLE_NAME);
-      const entities = [];
-      const iter = client.listEntities({
-        queryOptions: {
-          filter: `PartitionKey eq '${escapeODataString(user.userId)}'`,
-        },
-      });
-      for await (const entity of iter) {
-        entities.push({
+      const entities = await store.list(TABLE_NAME, user.userId);
+      return {
+        jsonBody: entities.map((entity) => ({
           id: entity.rowKey,
           name: entity.name,
           amount: entity.amount,
@@ -32,9 +26,8 @@ app.http("fixedPayments-list", {
           bonusMonths: entity.bonusMonths || "",
           bonusAmount: entity.bonusAmount || 0,
           createdAt: entity.createdAt,
-        });
-      }
-      return { jsonBody: entities };
+        })),
+      };
     } catch (error) {
       return handleError(error, context);
     }
@@ -59,8 +52,7 @@ app.http("fixedPayments-create", {
       const id = `fp_${uuidv4()}`;
       const now = new Date().toISOString();
 
-      const client = getTableClient(TABLE_NAME);
-      await client.createEntity({
+      await store.create(TABLE_NAME, {
         partitionKey: user.userId,
         rowKey: id,
         name: body.name,
@@ -105,19 +97,15 @@ app.http("fixedPayments-update", {
         return { status: 400, jsonBody: { errors: validationErrors } };
       }
 
-      const client = getTableClient(TABLE_NAME);
-      await client.updateEntity(
-        {
-          partitionKey: user.userId,
-          rowKey: id,
-          name: body.name,
-          amount: body.amount,
-          accountId: body.accountId ?? "",
-          bonusMonths: body.bonusMonths ?? "",
-          bonusAmount: body.bonusAmount ?? 0,
-        },
-        "Merge"
-      );
+      await store.merge(TABLE_NAME, {
+        partitionKey: user.userId,
+        rowKey: id,
+        name: body.name,
+        amount: body.amount,
+        accountId: body.accountId ?? "",
+        bonusMonths: body.bonusMonths ?? "",
+        bonusAmount: body.bonusAmount ?? 0,
+      });
 
       return {
         jsonBody: {
@@ -145,8 +133,7 @@ app.http("fixedPayments-delete", {
 
     try {
       const id = request.params.id;
-      const client = getTableClient(TABLE_NAME);
-      await client.deleteEntity(user.userId, id);
+      await store.remove(TABLE_NAME, user.userId, id);
 
       return { status: 204 };
     } catch (error) {

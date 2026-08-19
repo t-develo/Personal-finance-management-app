@@ -3,3 +3,9 @@ frontend/dist/
 api/local.settings.json
 .env
 *.log
+
+# ローカル稼働 / Azure からの移行データ
+data/
+*.db
+*.db-wal
+*.db-shm

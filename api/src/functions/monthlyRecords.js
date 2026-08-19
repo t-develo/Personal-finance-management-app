@@ -1,5 +1,5 @@
 const { app } = require("@azure/functions");
-const { getTableClient, escapeODataString } = require("../shared/tableClient");
+const store = require("../shared/store");
 const { requireOwner } = require("../shared/auth");
 const { handleError } = require("../shared/errors");
 const { validateYearMonth, validateMonthlyRecords } = require("../shared/validators");
@@ -23,20 +23,16 @@ app.http("monthlyRecords-get", {
         };
       }
 
-      const client = getTableClient(TABLE_NAME);
-      const escapedUserId = escapeODataString(user.userId);
-      const escapedYearMonth = escapeODataString(yearMonth);
-
       const accountBalances = {};
       const cardPayments = {};
 
-      const iter = client.listEntities({
-        queryOptions: {
-          filter: `PartitionKey eq '${escapedUserId}' and RowKey ge '${escapedYearMonth}_' and RowKey lt '${escapedYearMonth}~'`,
-        },
-      });
+      const entities = await store.listByRowKeyPrefix(
+        TABLE_NAME,
+        user.userId,
+        yearMonth
+      );
 
-      for await (const entity of iter) {
+      for (const entity of entities) {
         if (entity.recordType === "accountBalance") {
           accountBalances[entity.targetId] = entity.amount;
         } else if (entity.recordType === "cardPayment") {
@@ -74,39 +70,31 @@ app.http("monthlyRecords-put", {
         return { status: 400, jsonBody: { errors: validationErrors } };
       }
 
-      const client = getTableClient(TABLE_NAME);
-
       // Upsert account balances
       if (body.accountBalances) {
         for (const [accountId, amount] of Object.entries(body.accountBalances)) {
-          await client.upsertEntity(
-            {
-              partitionKey: user.userId,
-              rowKey: `${yearMonth}_balance_${accountId}`,
-              recordType: "accountBalance",
-              targetId: accountId,
-              amount: amount,
-              yearMonth: yearMonth,
-            },
-            "Merge"
-          );
+          await store.upsert(TABLE_NAME, {
+            partitionKey: user.userId,
+            rowKey: `${yearMonth}_balance_${accountId}`,
+            recordType: "accountBalance",
+            targetId: accountId,
+            amount: amount,
+            yearMonth: yearMonth,
+          });
         }
       }
 
       // Upsert card payments
       if (body.cardPayments) {
         for (const [cardId, amount] of Object.entries(body.cardPayments)) {
-          await client.upsertEntity(
-            {
-              partitionKey: user.userId,
-              rowKey: `${yearMonth}_card_${cardId}`,
-              recordType: "cardPayment",
-              targetId: cardId,
-              amount: amount,
-              yearMonth: yearMonth,
-            },
-            "Merge"
-          );
+          await store.upsert(TABLE_NAME, {
+            partitionKey: user.userId,
+            rowKey: `${yearMonth}_card_${cardId}`,
+            recordType: "cardPayment",
+            targetId: cardId,
+            amount: amount,
+            yearMonth: yearMonth,
+          });
         }
       }
 

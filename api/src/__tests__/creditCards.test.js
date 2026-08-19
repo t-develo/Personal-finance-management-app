@@ -4,8 +4,8 @@ const {
   createAuthenticatedRequest,
   createUnauthenticatedRequest,
   createMockContext,
-  createMockTableClient,
-  createAsyncIterable,
+  createMockStore,
+  resetMockStore,
 } = require("./helpers");
 
 const handlers = {};
@@ -17,11 +17,8 @@ jest.mock("@azure/functions", () => ({
   },
 }));
 
-const mockTableClient = createMockTableClient();
-jest.mock("../shared/tableClient", () => ({
-  getTableClient: () => mockTableClient,
-  escapeODataString: (v) => String(v).replace(/'/g, "''"),
-}));
+const mockStore = createMockStore();
+jest.mock("../shared/store", () => mockStore);
 
 jest.mock("uuid", () => ({
   v4: () => "test-uuid-1234",
@@ -31,7 +28,7 @@ require("../functions/creditCards");
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockTableClient.listEntities.mockReturnValue(createAsyncIterable([]));
+  resetMockStore(mockStore);
 });
 
 describe("creditCards-list", () => {
@@ -44,13 +41,12 @@ describe("creditCards-list", () => {
   });
 
   it("正常にエンティティ一覧を返す", async () => {
-    mockTableClient.listEntities.mockReturnValue(
-      createAsyncIterable([
-        { rowKey: "cc_1", name: "楽天カード", accountId: "acc_1", createdAt: "2025-01-01" },
-      ])
-    );
+    mockStore.list.mockResolvedValue([
+      { rowKey: "cc_1", name: "楽天カード", accountId: "acc_1", createdAt: "2025-01-01" },
+    ]);
     const req = createAuthenticatedRequest("GET");
     const result = await handler(req, createMockContext());
+    expect(mockStore.list).toHaveBeenCalledWith("creditCards", "user-test123");
     expect(result.jsonBody).toHaveLength(1);
     expect(result.jsonBody[0].name).toBe("楽天カード");
   });
@@ -92,7 +88,7 @@ describe("creditCards-update", () => {
   it("存在しないIDで404を返す", async () => {
     const error = new Error("Not found");
     error.statusCode = 404;
-    mockTableClient.updateEntity.mockRejectedValueOnce(error);
+    mockStore.merge.mockRejectedValueOnce(error);
     const req = createAuthenticatedRequest("PUT", { name: "test" }, { id: "cc_notfound" });
     const result = await handler(req, createMockContext());
     expect(result.status).toBe(404);
@@ -107,12 +103,13 @@ describe("creditCards-delete", () => {
     req.json = undefined;
     const result = await handler(req, createMockContext());
     expect(result.status).toBe(204);
+    expect(mockStore.remove).toHaveBeenCalledWith("creditCards", "user-test123", "cc_1");
   });
 
   it("存在しないIDで404を返す", async () => {
     const error = new Error("Not found");
     error.statusCode = 404;
-    mockTableClient.deleteEntity.mockRejectedValueOnce(error);
+    mockStore.remove.mockRejectedValueOnce(error);
     const req = createAuthenticatedRequest("DELETE", undefined, { id: "cc_notfound" });
     req.json = undefined;
     const result = await handler(req, createMockContext());
