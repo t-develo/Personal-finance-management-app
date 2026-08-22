@@ -1,0 +1,6 @@
+# 自動アップデート (deploy/update.sh) がサービスを再起動するための最小限の権限。
+#
+# install.sh がプレースホルダを実際のユーザー名と systemctl のパスに置換し、
+# visudo で構文検証してから /etc/sudoers.d/kakei-updater に設置する。
+# 許可するのは下の 2 コマンドだけで、update.sh 自体は root では動かさない。
+@APP_USER@ ALL=(root) NOPASSWD: @SYSTEMCTL@ restart kakei-app, @SYSTEMCTL@ daemon-reload

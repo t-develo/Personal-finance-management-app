@@ -1,0 +1,19 @@
+[Unit]
+Description=Poll the repository for kakei-app updates
+Documentation=https://github.com/t-develo/personal-finance-management-app
+
+[Timer]
+Unit=kakei-update.service
+
+# 起動 2 分後に 1 回、以降は 15 分ごと。
+OnBootSec=2min
+OnUnitActiveSec=15min
+
+# GitHub へのアクセスが毎回同じ時刻に集中しないようにずらす。
+RandomizedDelaySec=2min
+
+# 電源断などで実行できなかった回を、復帰後に 1 度だけ実行する。
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,28 @@
+[Unit]
+Description=Check repository and update kakei-app
+Documentation=https://github.com/t-develo/personal-finance-management-app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=pi
+Group=pi
+WorkingDirectory=/opt/kakei
+EnvironmentFile=/opt/kakei/.env
+ExecStart=/opt/kakei/deploy/update.sh
+
+# ラズパイでの npm ci + vite build は数分かかることがある。
+TimeoutStartSec=1800
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kakei-update
+
+# kakei-app.service のようなサンドボックス (ProtectSystem / ProtectHome /
+# ReadWritePaths) は付けない。このユニットは /opt/kakei 配下のコードを
+# 書き換えるのが仕事なので、制限すると git pull も npm ci も失敗する。
+NoNewPrivileges=false
+
+# [Install] は持たない。起動は kakei-update.timer からのみ行う。
+# (install.sh は systemctl link でこのファイルを systemd に認識させる)
