@@ -4,8 +4,8 @@ const {
   createAuthenticatedRequest,
   createUnauthenticatedRequest,
   createMockContext,
-  createMockTableClient,
-  createAsyncIterable,
+  createMockStore,
+  resetMockStore,
 } = require("./helpers");
 
 // Capture handler registrations
@@ -18,11 +18,8 @@ jest.mock("@azure/functions", () => ({
   },
 }));
 
-const mockTableClient = createMockTableClient();
-jest.mock("../shared/tableClient", () => ({
-  getTableClient: () => mockTableClient,
-  escapeODataString: (v) => String(v).replace(/'/g, "''"),
-}));
+const mockStore = createMockStore();
+jest.mock("../shared/store", () => mockStore);
 
 jest.mock("uuid", () => ({
   v4: () => "test-uuid-1234-5678-abcd-efghijklmnop",
@@ -33,7 +30,7 @@ require("../functions/accounts");
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockTableClient.listEntities.mockReturnValue(createAsyncIterable([]));
+  resetMockStore(mockStore);
 });
 
 describe("accounts-list", () => {
@@ -46,24 +43,19 @@ describe("accounts-list", () => {
   });
 
   it("正常にエンティティ一覧を返す", async () => {
-    mockTableClient.listEntities.mockReturnValue(
-      createAsyncIterable([
-        { rowKey: "acc_1", name: "普通預金", balance: 100000, createdAt: "2025-01-01", updatedAt: "2025-01-01" },
-        { rowKey: "acc_2", name: "貯蓄", balance: 500000, createdAt: "2025-01-01", updatedAt: "2025-01-01" },
-      ])
-    );
+    mockStore.list.mockResolvedValue([
+      { rowKey: "acc_1", name: "普通預金", balance: 100000, createdAt: "2025-01-01", updatedAt: "2025-01-01" },
+      { rowKey: "acc_2", name: "貯蓄", balance: 500000, createdAt: "2025-01-01", updatedAt: "2025-01-01" },
+    ]);
     const req = createAuthenticatedRequest("GET");
     const result = await handler(req, createMockContext());
+    expect(mockStore.list).toHaveBeenCalledWith("accounts", "user-test123");
     expect(result.jsonBody).toHaveLength(2);
     expect(result.jsonBody[0].id).toBe("acc_1");
   });
 
   it("DB障害時に500を返す", async () => {
-    mockTableClient.listEntities.mockReturnValue({
-      [Symbol.asyncIterator]: () => ({
-        next: () => Promise.reject(new Error("DB error")),
-      }),
-    });
+    mockStore.list.mockRejectedValueOnce(new Error("DB error"));
     const ctx = createMockContext();
     const req = createAuthenticatedRequest("GET");
     const result = await handler(req, ctx);
@@ -88,7 +80,14 @@ describe("accounts-create", () => {
     expect(result.jsonBody.name).toBe("普通預金");
     expect(result.jsonBody.balance).toBe(100000);
     expect(result.jsonBody.id).toMatch(/^acc_/);
-    expect(mockTableClient.createEntity).toHaveBeenCalled();
+    expect(mockStore.create).toHaveBeenCalledWith(
+      "accounts",
+      expect.objectContaining({
+        partitionKey: "user-test123",
+        name: "普通預金",
+        balance: 100000,
+      })
+    );
   });
 
   it("nameなしで400を返す", async () => {
@@ -126,7 +125,15 @@ describe("accounts-update", () => {
     const req = createAuthenticatedRequest("PUT", { name: "更新後", balance: 200000 }, { id: "acc_1" });
     const result = await handler(req, createMockContext());
     expect(result.jsonBody.name).toBe("更新後");
-    expect(mockTableClient.updateEntity).toHaveBeenCalled();
+    expect(mockStore.merge).toHaveBeenCalledWith(
+      "accounts",
+      expect.objectContaining({
+        partitionKey: "user-test123",
+        rowKey: "acc_1",
+        name: "更新後",
+        balance: 200000,
+      })
+    );
   });
 
   it("nameなしで400を返す", async () => {
@@ -138,7 +145,7 @@ describe("accounts-update", () => {
   it("存在しないIDで404を返す", async () => {
     const error = new Error("Not found");
     error.statusCode = 404;
-    mockTableClient.updateEntity.mockRejectedValueOnce(error);
+    mockStore.merge.mockRejectedValueOnce(error);
     const req = createAuthenticatedRequest("PUT", { name: "test", balance: 100 }, { id: "acc_notfound" });
     const ctx = createMockContext();
     const result = await handler(req, ctx);
@@ -154,15 +161,15 @@ describe("accounts-delete", () => {
     req.json = undefined; // DELETE has no body
     const result = await handler(req, createMockContext());
     expect(result.status).toBe(204);
-    expect(mockTableClient.deleteEntity).toHaveBeenCalledWith("user-test123", "acc_1");
+    expect(mockStore.remove).toHaveBeenCalledWith("accounts", "user-test123", "acc_1");
   });
 
   it("カスケード更新の部分失敗で207を返す", async () => {
-    // First listEntities call (fixedPayments) returns items
-    mockTableClient.listEntities
-      .mockReturnValueOnce(createAsyncIterable([{ rowKey: "fp_1" }]))
-      .mockReturnValueOnce(createAsyncIterable([]));
-    mockTableClient.updateEntity.mockRejectedValueOnce(new Error("cascade fail"));
+    // fixedPayments の参照を1件返し、その更新だけ失敗させる
+    mockStore.listByField.mockImplementation(async (table) =>
+      table === "fixedPayments" ? [{ rowKey: "fp_1" }] : []
+    );
+    mockStore.merge.mockRejectedValueOnce(new Error("cascade fail"));
 
     const req = createAuthenticatedRequest("DELETE", undefined, { id: "acc_1" });
     req.json = undefined;
@@ -174,10 +181,28 @@ describe("accounts-delete", () => {
     expect(ctx.log.error).toHaveBeenCalled();
   });
 
+  it("カスケード対象を accountId で検索する", async () => {
+    const req = createAuthenticatedRequest("DELETE", undefined, { id: "acc_1" });
+    req.json = undefined;
+    await handler(req, createMockContext());
+    expect(mockStore.listByField).toHaveBeenCalledWith(
+      "fixedPayments",
+      "user-test123",
+      "accountId",
+      "acc_1"
+    );
+    expect(mockStore.listByField).toHaveBeenCalledWith(
+      "creditCards",
+      "user-test123",
+      "accountId",
+      "acc_1"
+    );
+  });
+
   it("存在しないIDで404を返す", async () => {
     const error = new Error("Not found");
     error.statusCode = 404;
-    mockTableClient.deleteEntity.mockRejectedValueOnce(error);
+    mockStore.remove.mockRejectedValueOnce(error);
     const req = createAuthenticatedRequest("DELETE", undefined, { id: "acc_notfound" });
     req.json = undefined;
     const ctx = createMockContext();

@@ -1,0 +1,29 @@
+[Unit]
+Description=Personal Finance Management App (local)
+Documentation=https://github.com/t-develo/personal-finance-management-app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/kakei/api
+EnvironmentFile=/opt/kakei/.env
+ExecStart=/usr/bin/node src/local/server.js
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kakei-app
+
+# 最低限のサンドボックス。DB を書けるディレクトリだけ読み書き可にする。
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/opt/kakei/data
+
+[Install]
+WantedBy=multi-user.target
