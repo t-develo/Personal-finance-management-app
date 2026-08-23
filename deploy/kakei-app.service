@@ -9,6 +9,10 @@ Type=simple
 User=pi
 Group=pi
 WorkingDirectory=/opt/kakei/api
+# PORT / SQLITE_PATH / LOCAL_USER_ID などはここから読む。
+# SQLITE_PATH は必ず /opt/kakei/data/ 配下にすること。
+# 下の ReadWritePaths で書き込みを許しているのはこのディレクトリだけで、
+# 既定値 (WorkingDirectory/data = /opt/kakei/api/data) は許可範囲の外になる。
 EnvironmentFile=/opt/kakei/.env
 ExecStart=/usr/bin/node src/local/server.js
 Restart=always
@@ -19,6 +23,7 @@ StandardError=journal
 SyslogIdentifier=kakei-app
 
 # 最低限のサンドボックス。DB を書けるディレクトリだけ読み書き可にする。
+# アプリ自身はコードを書き換えられない (更新は kakei-update.service が行う)。
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
