@@ -164,6 +164,18 @@ install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/kakei-updater
 # シンボリックリンク)。こうしておくと、自動アップデートで unit が変わっても
 # daemon-reload だけで反映され、コピーし直す仕組みが要らない。
 log "systemd に登録"
+
+# kakei-app.service は User=pi 決め打ちなので、pi 以外で導入した場合は
+# ドロップインで上書きする。本体ファイルはリポジトリへのシンボリックリンクの
+# ままにしておく必要がある (自動更新の git merge --ff-only を壊さないため)。
+OVERRIDE_DIR="/etc/systemd/system/kakei-app.service.d"
+mkdir -p "$OVERRIDE_DIR"
+cat > "$OVERRIDE_DIR/override.conf" <<EOF
+[Service]
+User=$APP_USER
+Group=$APP_USER
+EOF
+
 "$SYSTEMCTL" daemon-reload
 "$SYSTEMCTL" enable "$APP_DIR/deploy/kakei-app.service"
 # kakei-update.service は timer からのみ起動するので enable はしない。
