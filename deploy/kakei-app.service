@@ -6,10 +6,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-# 既定は pi。APP_USER=pi 以外で導入した場合は install.sh が
-# /etc/systemd/system/kakei-app.service.d/override.conf で上書きする
-# (このファイルはシンボリックリンクで配置され git 追跡下にあるため、
-#  ここを直接書き換えると自動更新の git merge --ff-only が壊れる)。
+# 既定は pi / /opt/kakei。APP_USER や APP_DIR を変えて導入した場合は
+# install.sh が /etc/systemd/system/kakei-app.service.d/override.conf
+# で上書きする (このファイルはシンボリックリンクで配置され git 追跡下に
+# あるため、ここを直接書き換えると自動更新の git merge --ff-only が壊れる)。
 User=pi
 Group=pi
 WorkingDirectory=/opt/kakei/api

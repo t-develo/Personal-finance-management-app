@@ -165,15 +165,36 @@ install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/kakei-updater
 # daemon-reload だけで反映され、コピーし直す仕組みが要らない。
 log "systemd に登録"
 
-# kakei-app.service は User=pi 決め打ちなので、pi 以外で導入した場合は
-# ドロップインで上書きする。本体ファイルはリポジトリへのシンボリックリンクの
-# ままにしておく必要がある (自動更新の git merge --ff-only を壊さないため)。
-OVERRIDE_DIR="/etc/systemd/system/kakei-app.service.d"
-mkdir -p "$OVERRIDE_DIR"
-cat > "$OVERRIDE_DIR/override.conf" <<EOF
+# kakei-app.service / kakei-update.service は User=pi, WorkingDirectory・
+# EnvironmentFile・ReadWritePaths・ExecStart=/opt/kakei 決め打ちなので、
+# APP_USER や APP_DIR を変えて導入した場合はドロップインで上書きする。
+# 本体ファイルはリポジトリへのシンボリックリンクのままにしておく必要が
+# ある (自動更新の git merge --ff-only を壊さないため)。
+# EnvironmentFile= と ReadWritePaths= はリスト型なので、空代入で一度
+# リセットしてから新しい値を設定しないと元の /opt/kakei/... と両方が
+# 有効になってしまう。ExecStart= も同様 (複数コマンドを許す型のため)。
+mkdir -p /etc/systemd/system/kakei-app.service.d
+cat > /etc/systemd/system/kakei-app.service.d/override.conf <<EOF
 [Service]
 User=$APP_USER
 Group=$APP_USER
+WorkingDirectory=$APP_DIR/api
+EnvironmentFile=
+EnvironmentFile=$APP_DIR/.env
+ReadWritePaths=
+ReadWritePaths=$APP_DIR/data
+EOF
+
+mkdir -p /etc/systemd/system/kakei-update.service.d
+cat > /etc/systemd/system/kakei-update.service.d/override.conf <<EOF
+[Service]
+User=$APP_USER
+Group=$APP_USER
+WorkingDirectory=$APP_DIR
+EnvironmentFile=
+EnvironmentFile=$APP_DIR/.env
+ExecStart=
+ExecStart=$APP_DIR/deploy/update.sh
 EOF
 
 "$SYSTEMCTL" daemon-reload
